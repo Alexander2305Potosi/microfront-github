@@ -1,0 +1,71 @@
+import { Component } from '@angular/core';
+import { Router } from '@angular/router';
+
+@Component({
+  selector: 'app-login',
+  standalone: true,
+  template: `
+    <div class="relative min-h-screen flex items-center justify-center bg-slate-950 overflow-hidden font-sans">
+      <!-- Animated Background Orbs -->
+      <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-50 animate-blob"></div>
+      <div class="absolute top-[20%] right-[-10%] w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-50 animate-blob" style="animation-delay: 2s"></div>
+      <div class="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-emerald-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-50 animate-blob" style="animation-delay: 4s"></div>
+
+      <!-- Main Card -->
+      <div class="relative z-10 w-full max-w-lg p-10 bg-slate-900/60 backdrop-blur-2xl border border-slate-700/50 rounded-[2.5rem] shadow-[0_8px_32px_0_rgba(0,0,0,0.36)]">
+        <div class="flex justify-center mb-8">
+          <div class="p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl shadow-[0_0_40px_rgba(99,102,241,0.4)]">
+            <svg width="40" height="40" class="w-10 h-10 shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" /></svg>
+          </div>
+        </div>
+        
+        <div class="text-center mb-10">
+          <h2 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-purple-300 to-indigo-300 tracking-tight">Ecosistema MFE</h2>
+          <p class="text-slate-400 mt-3 font-medium">Ingresa tus credenciales para continuar</p>
+        </div>
+
+        <form (submit)="login(); $event.preventDefault()" class="space-y-6">
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-slate-300 ml-1">Correo Electrónico</label>
+            <div class="relative group">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg width="20" height="20" class="h-5 w-5 shrink-0 text-slate-500 group-focus-within:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" /></svg>
+              </div>
+              <input type="email" placeholder="admin@empresa.com" class="block w-full pl-11 pr-4 py-4 bg-slate-950/40 border border-slate-700/50 rounded-2xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-300 shadow-inner" />
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex justify-between items-center ml-1">
+              <label class="block text-sm font-semibold text-slate-300">Contraseña</label>
+              <a href="#" class="text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors">¿Olvidaste la clave?</a>
+            </div>
+            <div class="relative group">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg width="20" height="20" class="h-5 w-5 shrink-0 text-slate-500 group-focus-within:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              </div>
+              <input type="password" placeholder="••••••••" class="block w-full pl-11 pr-4 py-4 bg-slate-950/40 border border-slate-700/50 rounded-2xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-300 shadow-inner" />
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" class="relative group w-full flex justify-center py-4 px-4 border border-transparent rounded-2xl font-bold text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-slate-900 transition-all duration-300 overflow-hidden shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:shadow-[0_0_35px_rgba(79,70,229,0.6)] hover:-translate-y-1">
+              <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[length:200%_auto] group-hover:animate-gradient"></div>
+              <span class="relative z-10 flex items-center text-lg">
+                Acceder al Dashboard
+                <svg width="20" height="20" class="ml-2 w-5 h-5 shrink-0 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `
+})
+export class LoginComponent {
+  constructor(private router: Router) {}
+  
+  login() {
+    this.router.navigate(['/dashboard']);
+  }
+}
