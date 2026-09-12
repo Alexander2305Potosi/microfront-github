@@ -13,7 +13,8 @@ export class CoreDataTableComponent {
     key: string;
     label: string;
     type?: 'text' | 'avatar' | 'badge' | 'link';
-    filterType?: 'text' | 'number' | 'date' | 'date-range';
+    filterType?: 'text' | 'number' | 'date' | 'date-range' | 'select' | 'multiselect';
+    filterOptions?: Array<{ label: string; value: any }>;
     pattern?: string;
     patternError?: string;
   }> = [];

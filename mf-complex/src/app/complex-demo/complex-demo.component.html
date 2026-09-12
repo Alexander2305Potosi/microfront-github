@@ -164,6 +164,24 @@
                      class="block w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-900/50 text-slate-200 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all">
             </div>
           </div>
+        } @else if (col.filterType === 'select' || col.filterType === 'multiselect') {
+          <select 
+            [multiple]="col.filterType === 'multiselect'"
+            [name]="col.key"
+            [(ngModel)]="searchFilters[col.key]"
+            class="block w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-900/50 text-slate-200 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all">
+            
+            @if (col.filterType === 'select') {
+              <option [ngValue]="null">Todos</option>
+            }
+            
+            @for (opt of col.filterOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+          @if (col.filterType === 'multiselect') {
+            <p class="text-xs text-slate-500 mt-1">Mantén presionado Cmd/Ctrl para selección múltiple</p>
+          }
         } @else {
           <input 
             [type]="col.filterType || 'text'" 

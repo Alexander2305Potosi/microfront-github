@@ -43,7 +43,17 @@ export class ComplexDemoComponent {
     { key: 'date', label: 'Fecha Tx', filterType: 'date-range' as const },
     { key: 'user', label: 'Usuario', filterType: 'text' as const },
     { key: 'amount', label: 'Monto ($)', filterType: 'number' as const },
-    { key: 'status', label: 'Estado', type: 'badge' as const }
+    { 
+      key: 'status', 
+      label: 'Estado', 
+      type: 'badge' as const,
+      filterType: 'multiselect' as const,
+      filterOptions: [
+        { label: 'Completado', value: 'Completado' },
+        { label: 'Pendiente', value: 'Pendiente' },
+        { label: 'Rechazado', value: 'Rechazado' }
+      ]
+    }
   ];
   originalData1 = [
     { id: 'TRX-901', date: '2024-03-01', user: 'Alex P.', amount: 4500.00, status: 'Completado' },
@@ -58,20 +68,30 @@ export class ComplexDemoComponent {
     { key: 'sku', label: 'SKU', pattern: '^ITM-[0-9]{3}$', patternError: 'El formato debe ser ITM-000' },
     { key: 'added_date', label: 'Fecha Ingreso', filterType: 'date' as const },
     { key: 'product', label: 'Producto', filterType: 'text' as const },
+    { 
+      key: 'category', 
+      label: 'Categoría', 
+      filterType: 'select' as const,
+      filterOptions: [
+        { label: 'Laptops', value: 'Laptops' },
+        { label: 'Smartphones', value: 'Smartphones' },
+        { label: 'Audio', value: 'Audio' }
+      ]
+    },
     { key: 'stock', label: 'Inventario', filterType: 'number' as const },
     { key: 'price', label: 'Precio', type: 'badge' as const }
   ];
   originalData2 = [
-    { sku: 'ITM-001', added_date: '2023-12-01', product: 'MacBook Pro M3', stock: 15, price: '$2400' },
-    { sku: 'ITM-002', added_date: '2024-01-15', product: 'iPhone 15 Pro', stock: 42, price: '$999' },
-    { sku: 'ITM-003', added_date: '2024-02-28', product: 'AirPods Max', stock: 0, price: '$549' }
+    { sku: 'ITM-001', added_date: '2023-12-01', product: 'MacBook Pro M3', category: 'Laptops', stock: 15, price: '$2400' },
+    { sku: 'ITM-002', added_date: '2024-01-15', product: 'iPhone 15 Pro', category: 'Smartphones', stock: 42, price: '$999' },
+    { sku: 'ITM-003', added_date: '2024-02-28', product: 'AirPods Max', category: 'Audio', stock: 0, price: '$549' }
   ];
   tableData2 = [...this.originalData2];
 
   // Advanced Search Modal State
   isSearchModalOpen = false;
   activeSearchTable: 1 | 2 = 1;
-  searchFilters: Record<string, string> = {};
+  searchFilters: Record<string, any> = {};
   hasFilter1 = false;
   hasFilter2 = false;
 
@@ -93,7 +113,12 @@ export class ComplexDemoComponent {
 
   applyAdvancedSearch() {
     const filters = this.searchFilters;
-    const isActive = Object.values(filters).some(val => val && String(val).trim() !== '');
+    const isActive = Object.keys(filters).some(key => {
+      const val = filters[key];
+      if (Array.isArray(val)) return val.length > 0;
+      return val !== null && val !== undefined && String(val).trim() !== '' && String(val) !== 'null';
+    });
+
     const columns = this.activeColumns;
     
     const filterFn = (item: any) => {
@@ -109,6 +134,17 @@ export class ComplexDemoComponent {
         }
 
         const filterVal = filters[col.key];
+
+        if (col.filterType === 'multiselect') {
+          if (!filterVal || !Array.isArray(filterVal) || filterVal.length === 0) return true;
+          return filterVal.includes(item[col.key]);
+        }
+
+        if (col.filterType === 'select') {
+          if (!filterVal || filterVal === 'null') return true;
+          return String(item[col.key]) === String(filterVal);
+        }
+
         if (!filterVal) return true;
 
         if (col.filterType === 'date') {
