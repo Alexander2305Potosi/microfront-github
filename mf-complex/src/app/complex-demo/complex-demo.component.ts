@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CoreDataTableComponent } from 'core-ui/src/lib/data-table/data-table.component';
-import { CoreStatCardComponent } from 'core-ui/src/lib/stat-card/stat-card.component';
+import { CoreDataTableComponent, CoreStatCardComponent } from 'core-ui';
 import { ModalComponent } from '../components/modal/modal.component';
 import { AlertComponent } from '../components/alert/alert.component';
 import { AccordionComponent, AccordionItem } from '../components/accordion/accordion.component';
