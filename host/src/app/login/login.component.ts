@@ -15,24 +15,16 @@ export class LoginComponent {
   }
 
   loginWithAzure() {
-    console.log('Iniciando flujo de autenticación con Azure Active Directory...');
+    console.log('Iniciando flujo de autenticación con Azure Active Directory en ventana principal...');
     
-    // Si quisieras redirigir en lugar de un popup, usarías loginRedirect()
-    this.msalService.loginPopup().subscribe({
-      next: (response) => {
-        console.log('Login exitoso de Azure', response);
-        // Guardamos el token para que el interceptor lo tome
-        localStorage.setItem('msal_jwt_token', response.idToken);
-        this.router.navigate(['/dashboard']);
-      },
-      error: (error) => {
-        console.error('Error de login en Azure (Probablemente porque el ClientID es falso):', error);
-        
-        // --- SOLO PARA DEMOSTRACIÓN (Como no tenemos credenciales reales aún) ---
-        // Forzamos el paso al Dashboard para que puedas probar
-        alert('MSAL Error: ' + error.message + '\n\nSaltando validación por ser un demo...');
-        this.router.navigate(['/dashboard']);
-      }
-    });
+    // Al usar loginRedirect(), el navegador abandonará nuestra página e irá a Microsoft.
+    // Una vez autenticado, Microsoft redireccionará de vuelta a nuestra App y el token 
+    // será procesado globalmente en app.component.ts
+    try {
+      this.msalService.loginRedirect();
+    } catch (error) {
+      console.error('Error al intentar redireccionar a Azure:', error);
+      alert('MSAL Error al intentar redireccionar. \nVerifica tu configuración en app.config.ts');
+    }
   }
 }
