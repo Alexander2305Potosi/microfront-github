@@ -34,33 +34,76 @@ ng serve remote
 
 ## 🏗️ Arquitectura: Del Alto al Bajo Nivel
 
-El ecosistema sigue un patrón estricto para garantizar la independencia funcional de cada aplicación (Microfrontend), manteniendo al mismo tiempo la estandarización visual.
+El ecosistema sigue un patrón estricto basado en independizar dominios de negocio y reutilizar código UI mediante librerías internas, sin acoplar compilaciones ni despliegues.
 
-### 1. Alto Nivel: Ecosistema Federado (Module Federation)
-A nivel global, la arquitectura se divide en responsabilidades de despliegue y orquestación:
-- **`host` (Shell):** Es el contenedor principal. Se encarga únicamente del enrutamiento base, la autenticación, la estructura maestra de la pantalla (Layout/Menús) y la orquestación. Su responsabilidad principal es cargar aplicaciones remotas en tiempo de ejecución.
-- **`remote` (MFE):** Es un microfrontend que encapsula todo un dominio de negocio funcional (ej: Búsqueda de Usuarios de GitHub). Posee sus propios modelos, lógica de negocio y llamadas HTTP. Se expone a sí mismo a través del archivo `remoteEntry.json`.
-- **`Native Federation`**: Permite que el `host` consuma el código del `remote` a través de la red sin tenerlo en su bundle de compilación, compartiendo de forma inteligente librerías pesadas en formato "singleton" (como `@angular/core` o `rxjs`).
+### 1. Alto Nivel: Múltiples MFs y Módulos Federados
+A nivel global, la arquitectura divide las responsabilidades de compilación y orquestación. **Module Federation solo se usa para cargar funcionalidades de negocio completas**, no para componentes visuales sueltos.
+- **Independencia de despliegue:** `host` y `remote` tienen flujos de CI/CD completamente independientes. No existe acoplamiento de repositorios ni bloqueos en el lanzamiento de un release.
+- **Restricción estricta:** No se deben crear dependencias directas de red entre MFs (ej. `host <--> remote` para un botón). Si un MFE necesita un componente UI, no debe pedirlo a otro MFE por red para evitar latencia, problemas de caché y puntos únicos de fallo.
+- **Singletons:** Dependencias pesadas (`@angular/core`, `rxjs`, `tailwindcss`) están configuradas como `shared` en `federation.config.js` para cargarse una sola vez.
 
-### 2. Nivel Medio: Librerías Internas (`core-ui`)
-En lugar de compartir componentes puramente visuales a través de la red (lo cual agrega latencia e inestabilidad), los componentes reutilizables viven en el mismo workspace pero se compilan de forma estática en cada MFE:
-- **`projects/core-ui` (Librería compartida):** Contiene los componentes de UI complejos (Tablas con filtros, Tarjetas de Estadísticas).
-- **Inyección directa:** No se publica en NPM ni se distribuye como Microfrontend. Cuando el `host` o el `remote` necesitan la tabla, la importan mediante el alias (paths de TS) configurado en el `tsconfig.json`. En tiempo de compilación, el pipeline de Angular inyecta el código fuente de la tabla dentro del bundle del MFE que lo consume.
-- **Ventaja de Despliegue:** Cada MFE puede tener pipelines (CI/CD) y lanzamientos (releases) completamente independientes sin depender de que exista un pipeline central de UI.
+### 2. Nivel Medio: Librería Compartida (`core-ui`) en el Workspace
+Para compartir la tabla y otros componentes complejos entre el `host` y los diferentes MFs, se utiliza una **librería interna estática** en el Monorepo. No se publica como librería NPM, ni como artefacto independiente, ni tiene pipeline propio.
+- **Ubicación Física:** `projects/core-ui/`
+- **Configuración TS (El Contrato de Consumo):** El archivo `tsconfig.json` raíz crea el alias `"core-ui"` apuntando directamente a `projects/core-ui/src/public-api.ts`.
+- **Estrategia de compilación:** Cuando un MF (`remote` o `host`) requiere usar la tabla, importa este alias. Al construir el proyecto, el pipeline de compilación del MF en turno toma el código fuente de `core-ui` y **lo inyecta estáticamente en su propio bundle**.
+```json
+// tsconfig.json (Raíz)
+{
+  "compilerOptions": {
+    "paths": {
+      "core-ui": [
+        "projects/core-ui/src/public-api.ts"
+      ]
+    }
+  }
+}
+```
 
-### 3. Bajo Nivel: Organización del Código y Contratos
-A nivel de código, se mantiene una estricta separación de responsabilidades:
-- **Componentes "Tontos" (Dumb Components) en `core-ui`:**
-  - Ubicación: `projects/core-ui/src/lib/data-table/`
-  - La tabla no sabe de dónde vienen los datos ni conoce endpoints de APIs.
-  - El contrato de comunicación es estricto a través de inputs y outputs genéricos: recibe `@Input() columns` e `@Input() data` agnósticos. Las interacciones internas (como filtrar) emiten eventos hacia arriba.
-- **Componentes "Inteligentes" (Smart Components) en los Remotes:**
-  - Ubicación: `remote/src/app/github-profiles/`
-  - El microfrontend remoto mantiene su propia lógica de negocio y dependencias específicas.
-  - Se encarga de hacer peticiones a la API de negocio, mapear la respuesta, decidir los permisos, y finalmente inyectarle los datos brutos a `CoreDataTableComponent`.
-- **Testing Aislado (Jest Zoneless):**
-  - El ecosistema usa configuración nativa de **Jest** sin `zone.js` (arquitectura ultramoderna de Angular 18+).
-  - Las pruebas (`.spec.ts`) residen junto al código de la librería y prueban el comportamiento del UI (eventos, manipulación del DOM, filtros) de forma completamente aislada de la lógica de los Remotes.
+### 3. Bajo Nivel: Organización del Código y Contratos Agnosticos
+
+A nivel de código, implementamos una separación estricta: **la UI jamás debe conocer la lógica de negocio ni el dominio de datos.**
+
+#### 3.1. Librería `core-ui` (Dumb Components)
+Ubicada en `projects/core-ui/src/lib/data-table/data-table.component.ts`. Es un componente standalone 100% agnóstico del dominio. Define contratos fuertes (interfaces) que dictan cómo los MFs deben interactuar con él:
+```typescript
+// Contrato base de la tabla (projects/core-ui/src/lib/...)
+export interface CoreTableColumn {
+  key: string;
+  label: string;
+}
+
+@Component({
+  selector: 'core-data-table',
+  standalone: true,
+  // ...
+})
+export class CoreDataTableComponent {
+  // La tabla recibe la configuración, pero no sabe qué significa
+  @Input() columns: CoreTableColumn[] = [];
+  @Input() data: any[] = [];
+  
+  // Emite eventos hacia arriba para que el MF actúe
+  @Output() search = new EventEmitter<string>();
+}
+```
+
+#### 3.2. Consumo en los MFs (Smart Components)
+El microfrontend (ej. `remote/src/app/github-profiles/`) conserva sus propios modelos (`GithubUser`), sus propios servicios inyectados (`GithubApiService`) y sus propias reglas de dominio y permisos. Su única relación con la tabla es inyectarle los datos formateados cumpliendo el contrato público.
+```html
+<!-- remote/src/app/github-profiles/github-profiles.component.html -->
+<core-data-table
+  title="Usuarios de GitHub"
+  [columns]="githubColumns"
+  [data]="users"
+  (search)="onSearch($event)">
+</core-data-table>
+```
+*En el ejemplo superior, `CoreDataTableComponent` procesa el evento y renderiza las celdas, pero es ignorante de que está operando sobre "Usuarios de GitHub" o que consumió una API externa.*
+
+#### 3.3. Testing Unitario Aislado (Jest Zoneless)
+- **Aislamiento Absoluto:** La librería `core-ui` posee pruebas unitarias escritas en **Jest** (`data-table.component.spec.ts`) que validan las interacciones del DOM y la correcta emisión de los `@Input`/`@Output`. Nunca dependen de mocks de servicios de los MFs.
+- **Configuración Moderna:** Configuramos el ecosistema para correr en modo *Zoneless* (`jest-preset-angular/setup-env/zoneless`), aprovechando la arquitectura ultramoderna de Angular 18+ para hacer el testing extremadamente rápido y sin dependencias mágicas en el DOM.
 
 ---
 
@@ -70,5 +113,4 @@ A nivel de código, se mantiene una estricta separación de responsabilidades:
 - **Federation Config:** 
   - Si deseas exponer un componente desde el `remote` hacia el exterior, debes declararlo en el archivo `remote/federation.config.js` dentro del bloque `exposes`.
   - El `host` detectará automáticamente el código expuesto si configuras las rutas correctamente.
-- **Dependencias Compartidas:** Las dependencias como Angular Core o RxJS ya están configuradas como singletons en los archivos `federation.config.js` para evitar duplicidad de carga en el navegador.
-- **Pruebas Unitarias:** Ejecuta `npm run test` para correr las pruebas locales de las librerías compartidas.
+- **Pruebas Unitarias:** Ejecuta `npm run test` para correr las pruebas locales de todo el ecosistema y librerías compartidas.
