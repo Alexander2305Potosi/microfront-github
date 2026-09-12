@@ -70,6 +70,8 @@ export class ComplexDemoComponent {
   isSearchModalOpen = false;
   activeSearchTable: 1 | 2 = 1;
   searchFilters: Record<string, string> = {};
+  hasFilter1 = false;
+  hasFilter2 = false;
 
   get activeColumns() {
     return this.activeSearchTable === 1 ? this.tableColumns1 : this.tableColumns2;
@@ -83,8 +85,10 @@ export class ComplexDemoComponent {
 
   applyAdvancedSearch() {
     const filters = this.searchFilters;
+    const isActive = Object.values(filters).some(val => val && val.trim() !== '');
     
     if (this.activeSearchTable === 1) {
+      this.hasFilter1 = isActive;
       this.tableData1 = this.originalData1.filter(item => {
         return Object.keys(filters).every(key => {
           if (!filters[key]) return true;
@@ -92,6 +96,7 @@ export class ComplexDemoComponent {
         });
       });
     } else {
+      this.hasFilter2 = isActive;
       this.tableData2 = this.originalData2.filter(item => {
         return Object.keys(filters).every(key => {
           if (!filters[key]) return true;
@@ -101,6 +106,16 @@ export class ComplexDemoComponent {
     }
     
     this.isSearchModalOpen = false;
+  }
+
+  clearFilter(tableNum: 1 | 2) {
+    if (tableNum === 1) {
+      this.hasFilter1 = false;
+      this.tableData1 = [...this.originalData1];
+    } else {
+      this.hasFilter2 = false;
+      this.tableData2 = [...this.originalData2];
+    }
   }
 
   // Generic Modals
