@@ -34,4 +34,20 @@ describe('GithubProfilesComponent', () => {
     expect(component.users()[0].login).toBe('testuser');
     expect(component.loading()).toBe(false);
   });
+
+  it('should handle API errors gracefully', async () => {
+    global.fetch = jest.fn(() => Promise.reject('API Error')) as jest.Mock;
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    
+    await component.ngOnInit();
+    
+    expect(consoleSpy).toHaveBeenCalledWith('Failed to fetch github users', 'API Error');
+    expect(component.loading()).toBe(false);
+  });
+
+  it('should handle filter term', () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    component.handleFilter('angular');
+    expect(consoleSpy).toHaveBeenCalledWith('Filtrando por:', 'angular');
+  });
 });

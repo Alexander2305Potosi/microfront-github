@@ -41,4 +41,17 @@ describe('CoreDataTableComponent', () => {
     expect(component.filteredData.length).toBe(1);
     expect(component.filteredData[0].name).toBe('Angular');
   });
+  it('should reset filter when search term is empty', () => {
+    component.columns = [{ key: 'name', label: 'Name' }];
+    component.data = [
+      { name: 'Angular' },
+      { name: 'React' }
+    ];
+    
+    component.onSearch({ target: { value: 'ang' } } as unknown as Event);
+    expect(component.filteredData.length).toBe(1);
+
+    component.onSearch({ target: { value: '' } } as unknown as Event);
+    expect(component.filteredData.length).toBe(2);
+  });
 });
