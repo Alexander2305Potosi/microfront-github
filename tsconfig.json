@@ -5,7 +5,7 @@
   "compilerOptions": {
     "paths": {
       "core-ui": [
-        "./projects/core-ui/src/public-api.ts"
+        "./core-ui/src/public-api.ts"
       ]
     },
     "strict": true,
@@ -35,10 +35,10 @@
       "path": "./tsconfig.spec.json"
     },
     {
-      "path": "./projects/core-ui/tsconfig.lib.json"
+      "path": "./core-ui/tsconfig.lib.json"
     },
     {
-      "path": "./projects/core-ui/tsconfig.spec.json"
+      "path": "./core-ui/tsconfig.spec.json"
     }
   ]
 }

@@ -4,7 +4,7 @@ module.exports = {
   testEnvironment: 'jsdom',
   modulePaths: ['<rootDir>'],
   moduleNameMapper: {
-    '^core-ui$': '<rootDir>/projects/core-ui/src/public-api.ts'
+    '^core-ui$': '<rootDir>/core-ui/src/public-api.ts'
   },
   testMatch: [
     '**/+(*.)+(spec).+(ts)'
