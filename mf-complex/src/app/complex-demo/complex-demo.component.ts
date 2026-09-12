@@ -95,6 +95,10 @@ export class ComplexDemoComponent {
   hasFilter1 = false;
   hasFilter2 = false;
 
+  // Custom Dropdown State
+  dropdownOpen: Record<string, boolean> = {};
+  dropdownSearch: Record<string, string> = {};
+
   get activeColumns() {
     return this.activeSearchTable === 1 ? this.tableColumns1 : this.tableColumns2;
   }
@@ -102,7 +106,46 @@ export class ComplexDemoComponent {
   openAdvancedSearch(tableNum: 1 | 2) {
     this.activeSearchTable = tableNum;
     this.searchFilters = {};
+    this.dropdownOpen = {};
+    this.dropdownSearch = {};
     this.isSearchModalOpen = true;
+  }
+
+  toggleDropdown(key: string) {
+    this.dropdownOpen[key] = !this.dropdownOpen[key];
+  }
+
+  toggleSelection(key: string, value: any, isMulti: boolean) {
+    if (isMulti) {
+      if (!this.searchFilters[key]) this.searchFilters[key] = [];
+      const idx = this.searchFilters[key].indexOf(value);
+      if (idx > -1) {
+        this.searchFilters[key].splice(idx, 1);
+      } else {
+        this.searchFilters[key].push(value);
+      }
+    } else {
+      this.searchFilters[key] = value;
+      this.dropdownOpen[key] = false; // close on select
+    }
+  }
+
+  getFilteredOptions(col: any) {
+    const search = this.dropdownSearch[col.key]?.toLowerCase() || '';
+    if (!search) return col.filterOptions || [];
+    return col.filterOptions.filter((opt: any) => opt.label.toLowerCase().includes(search));
+  }
+
+  getSelectedLabels(col: any): string {
+    const val = this.searchFilters[col.key];
+    if (col.filterType === 'multiselect') {
+      if (!val || val.length === 0) return 'Seleccionar opciones...';
+      return val.length + ' seleccionado(s)';
+    } else {
+      if (!val || val === 'null') return 'Todos';
+      const opt = col.filterOptions.find((o: any) => o.value === val);
+      return opt ? opt.label : 'Todos';
+    }
   }
 
   onNumberKeydown(event: KeyboardEvent) {
