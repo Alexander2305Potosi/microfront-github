@@ -6,19 +6,23 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   // const authService = inject(MsalService);
   // const token = authService.instance.getActiveAccount()?.idToken;
 
-  // Por ahora, o si extraes el token manualmente tras el login de Azure:
+  // Generar un UUID único para la trazabilidad de esta petición
+  const uuid = crypto.randomUUID();
+
+  // Inicializar cabeceras con el UUID
+  let headers = req.headers.set('X-Request-ID', uuid);
+
+  // Intentar obtener el token de Azure AD
   const token = localStorage.getItem('msal_jwt_token');
 
+  // Si existe el token, añadirlo también
   if (token) {
-    // Clonar la petición para inyectar el Header de Autorización
-    const authReq = req.clone({
-      headers: req.headers.set('Authorization', `Bearer ${token}`)
-    });
-    
-    // Continuar con la petición modificada
-    return next(authReq);
+    headers = headers.set('Authorization', `Bearer ${token}`);
   }
 
-  // Si no hay token, la petición pasa intacta
-  return next(req);
+  // Clonar la petición con las nuevas cabeceras
+  const modifiedReq = req.clone({ headers });
+  
+  // Continuar con la petición modificada
+  return next(modifiedReq);
 };
