@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve host",
-    "start:all": "concurrently --kill-others \"ng serve host\" \"ng serve mf-github-profiles\" \"ng serve mf-users\" \"ng serve mf-repos\" \"ng serve mf-complex\"",
+    "start:all": "concurrently --kill-others \"NG_DISABLE_VERSION_CHECK=1 ng serve host\" \"NG_DISABLE_VERSION_CHECK=1 ng serve mf-github-profiles\" \"NG_DISABLE_VERSION_CHECK=1 ng serve mf-users\" \"NG_DISABLE_VERSION_CHECK=1 ng serve mf-repos\" \"NG_DISABLE_VERSION_CHECK=1 ng serve mf-complex\"",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "jest",

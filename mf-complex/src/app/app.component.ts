@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
-import { GithubProfilesComponent } from './github-profiles/github-profiles.component';
+import { ComplexDemoComponent } from './complex-demo/complex-demo.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [GithubProfilesComponent],
-  templateUrl: './app.component.html'
+  imports: [ComplexDemoComponent],
+  template: '<app-complex-demo></app-complex-demo>'
 })
 export class AppComponent {}
