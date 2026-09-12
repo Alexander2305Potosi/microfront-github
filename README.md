@@ -14,21 +14,15 @@ Ambos proyectos utilizan **Angular Native Federation** y **Tailwind CSS v4**.
 
 Para ver el ecosistema funcionando correctamente, necesitas tener ambos servidores ejecutándose simultáneamente. 
 
-Abre **dos terminales** diferentes ubicadas en la raíz de este proyecto (`/microfrontend`):
+Ejecuta el siguiente comando maestro en la raíz de este proyecto (`/microfrontend`) para compilar y levantar simultáneamente el Host y todos los Microfrontends distribuidos:
 
-### Terminal 1: Iniciar el Host
-Ejecuta el siguiente comando para levantar el contenedor principal:
 ```bash
-ng serve host
+npm run start:all
 ```
-> 🌐 Podrás visualizarlo en tu navegador abriendo: **http://localhost:4200**
 
-### Terminal 2: Iniciar el Remote (Microfrontend)
-Ejecuta el siguiente comando para levantar el componente remoto:
-```bash
-ng serve remote
-```
-> 🌐 El remote estará vivo de forma independiente en: **http://localhost:4201**
+> 🌐 Podrás visualizar el ecosistema en tu navegador abriendo: **http://localhost:4200**
+> 
+> *Nota: Este script orquesta el levantamiento paralelo utilizando la librería `concurrently` y esquiva bloqueos por versiones de Node.js en Angular 22+.*
 
 ---
 
