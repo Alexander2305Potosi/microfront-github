@@ -12,8 +12,8 @@
     <div class="flex items-baseline space-x-2">
       <h2 class="text-4xl font-black text-white tracking-tight">{{ value }}</h2>
       @if (trend) {
-        <span [class]="'text-sm font-bold ' + (trend > 0 ? 'text-emerald-400' : 'text-red-400')">
-          {{ trend > 0 ? '+' : '' }}{{ trend }}%
+        <span [class]="'text-sm font-bold ' + (isPositiveTrend ? 'text-emerald-400' : 'text-red-400')">
+          {{ formattedTrend }}
         </span>
       }
     </div>

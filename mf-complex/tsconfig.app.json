@@ -1,5 +1,3 @@
-/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
-/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
@@ -13,5 +11,9 @@
   ],
   "exclude": [
     "src/**/*.spec.ts"
+  ],
+  "files": [
+    "../core-ui/src/public-api.ts",
+    "src/app/complex-demo/complex-demo.component.ts"
   ]
 }
