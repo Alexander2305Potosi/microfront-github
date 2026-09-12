@@ -9,7 +9,7 @@ export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
   { 
     path: 'github', 
-    loadComponent: () => loadRemoteModule('remote', './GithubProfiles').then(m => m.GithubProfilesComponent) 
+    loadComponent: () => loadRemoteModule('mf-github-profiles', './GithubProfiles').then(m => m.GithubProfilesComponent) 
   },
   { 
     path: 'github-users', 

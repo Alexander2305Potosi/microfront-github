@@ -1,5 +1,5 @@
 {
-  "remote": "http://localhost:4201/remoteEntry.json",
+  "mf-github-profiles": "http://localhost:4201/remoteEntry.json",
   "mf-users": "http://localhost:4202/remoteEntry.json",
   "mf-repos": "http://localhost:4203/remoteEntry.json",
   "mf-complex": "http://localhost:4204/remoteEntry.json"

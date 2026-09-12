@@ -1,9 +1,9 @@
 const { withNativeFederation, shareAll } = require('@angular-architects/native-federation/config');
 
 const config = withNativeFederation({
-  name: 'remote',
+  name: 'mf-github-profiles',
   exposes: {
-    './GithubProfiles': { file: './remote/src/app/github-profiles/github-profiles.component.ts' },
+    './GithubProfiles': { file: './mf-github-profiles/src/app/github-profiles/github-profiles.component.ts' },
   },
   shared: {
     ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),

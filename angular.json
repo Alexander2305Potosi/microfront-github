@@ -120,120 +120,6 @@
         }
       }
     },
-    "remote": {
-      "projectType": "application",
-      "schematics": {
-        "@schematics/angular:component": {
-          "style": "scss"
-        }
-      },
-      "root": "remote",
-      "sourceRoot": "remote/src",
-      "prefix": "app",
-      "architect": {
-        "build": {
-          "builder": "@angular-architects/native-federation:build",
-          "options": {
-            "browser": "remote/src/main.ts",
-            "tsConfig": "remote/tsconfig.app.json",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "remote/public"
-              }
-            ],
-            "styles": [
-              "remote/src/styles.scss"
-            ],
-            "ssr": false
-          },
-          "configurations": {
-            "production": {
-              "target": "remote:esbuild:production"
-            },
-            "development": {
-              "target": "remote:esbuild:development",
-              "dev": true
-            }
-          },
-          "defaultConfiguration": "production"
-        },
-        "serve": {
-          "builder": "@angular-architects/native-federation:build",
-          "options": {
-            "target": "remote:serve-original:development",
-            "rebuildDelay": 500,
-            "dev": true,
-            "cacheExternalArtifacts": false,
-            "port": 4201
-          }
-        },
-        "test": {
-          "builder": "@angular/build:unit-test"
-        },
-        "esbuild": {
-          "builder": "@angular/build:application",
-          "options": {
-            "browser": "remote/src/main.ts",
-            "tsConfig": "remote/tsconfig.app.json",
-            "inlineStyleLanguage": "scss",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "remote/public"
-              }
-            ],
-            "styles": [
-              "remote/src/styles.scss"
-            ],
-            "security": {
-              "allowedHosts": []
-            },
-            "polyfills": [
-              "es-module-shims"
-            ]
-          },
-          "configurations": {
-            "production": {
-              "budgets": [
-                {
-                  "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
-                },
-                {
-                  "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
-                }
-              ],
-              "outputHashing": "all"
-            },
-            "development": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true
-            }
-          },
-          "defaultConfiguration": "production"
-        },
-        "serve-original": {
-          "builder": "@angular/build:dev-server",
-          "configurations": {
-            "production": {
-              "buildTarget": "remote:esbuild:production"
-            },
-            "development": {
-              "buildTarget": "remote:esbuild:development"
-            }
-          },
-          "defaultConfiguration": "development",
-          "options": {
-            "port": 4201
-          }
-        }
-      }
-    },
     "core-ui": {
       "projectType": "library",
       "root": "projects/core-ui",
@@ -598,6 +484,120 @@
           "defaultConfiguration": "development",
           "options": {
             "port": 4204
+          }
+        }
+      }
+    },
+    "mf-github-profiles": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "mf-github-profiles",
+      "sourceRoot": "mf-github-profiles/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {
+            "browser": "mf-github-profiles/src/main.ts",
+            "tsConfig": "mf-github-profiles/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "mf-github-profiles/public"
+              }
+            ],
+            "styles": [
+              "mf-github-profiles/src/styles.scss"
+            ],
+            "ssr": false
+          },
+          "configurations": {
+            "production": {
+              "target": "mf-github-profiles:esbuild:production"
+            },
+            "development": {
+              "target": "mf-github-profiles:esbuild:development",
+              "dev": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {
+            "target": "mf-github-profiles:serve-original:development",
+            "rebuildDelay": 500,
+            "dev": true,
+            "cacheExternalArtifacts": false,
+            "port": 4201
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test"
+        },
+        "esbuild": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "mf-github-profiles/src/main.ts",
+            "tsConfig": "mf-github-profiles/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "mf-github-profiles/public"
+              }
+            ],
+            "styles": [
+              "mf-github-profiles/src/styles.scss"
+            ],
+            "security": {
+              "allowedHosts": []
+            },
+            "polyfills": [
+              "es-module-shims"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve-original": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "mf-github-profiles:esbuild:production"
+            },
+            "development": {
+              "buildTarget": "mf-github-profiles:esbuild:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4201
           }
         }
       }
