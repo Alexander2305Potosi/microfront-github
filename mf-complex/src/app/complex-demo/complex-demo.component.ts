@@ -20,49 +20,88 @@ import { AccordionComponent, AccordionItem } from '../components/accordion/accor
 })
 export class ComplexDemoComponent {
   isModalOpen = false;
-  modalType: 'info' | 'warning' | 'danger' = 'warning';
+  modalType: 'info' | 'warning' | 'danger' = 'info';
   
+  // Accordion
   accordionItems: AccordionItem[] = [
-    {
-      title: '¿Qué es este Microfrontend?',
-      content: 'Este módulo demuestra la capacidad de integrar múltiples componentes complejos, tanto de la librería core-ui como propios, en una sola vista coherente y con alta interactividad.'
-    },
-    {
-      title: 'Rendimiento y Carga Perezosa',
-      content: 'Module Federation permite que esta vista cargue componentes pesados sin afectar al Host. Los estilos Tailwind se compilan modularmente.'
-    },
-    {
-      title: 'Seguridad y Aislamiento',
-      content: 'Los modales y alertas en este MF operan en su propio contexto de Angular, previniendo conflictos de dependencias con otras vistas.'
-    }
+    { title: '¿Qué es este Microfrontend?', content: 'Módulo demostrativo con múltiples componentes de alta interactividad.' },
+    { title: 'Tablas Dinámicas', content: 'core-ui renderiza cualquier cantidad de columnas sin modificar su código interno.' },
+    { title: 'Búsqueda Avanzada', content: 'El modal lee dinámicamente las columnas de la tabla para generar los campos de filtro.' }
   ];
 
-  tableData = [
+  // Table 1: Transactions
+  tableColumns1 = [
+    { key: 'id', label: 'Transacción' },
+    { key: 'user', label: 'Usuario' },
+    { key: 'amount', label: 'Monto ($)' },
+    { key: 'status', label: 'Estado', type: 'badge' as const }
+  ];
+  originalData1 = [
     { id: 'TRX-901', user: 'Alex P.', amount: 4500.00, status: 'Completado' },
     { id: 'TRX-902', user: 'Sarah J.', amount: 120.50, status: 'Pendiente' },
     { id: 'TRX-903', user: 'Mike R.', amount: 8900.25, status: 'Rechazado' },
     { id: 'TRX-904', user: 'Emma W.', amount: 340.00, status: 'Completado' },
   ];
+  tableData1 = [...this.originalData1];
 
-  tableColumns = [
-    { key: 'id', label: 'ID Transacción' },
-    { key: 'user', label: 'Usuario' },
-    { key: 'amount', label: 'Monto ($)' },
-    { key: 'status', label: 'Estado' }
+  // Table 2: Products
+  tableColumns2 = [
+    { key: 'sku', label: 'SKU' },
+    { key: 'product', label: 'Producto' },
+    { key: 'stock', label: 'Inventario' },
+    { key: 'price', label: 'Precio', type: 'badge' as const }
   ];
+  originalData2 = [
+    { sku: 'ITM-001', product: 'MacBook Pro M3', stock: 15, price: '$2400' },
+    { sku: 'ITM-002', product: 'iPhone 15 Pro', stock: 42, price: '$999' },
+    { sku: 'ITM-003', product: 'AirPods Max', stock: 0, price: '$549' }
+  ];
+  tableData2 = [...this.originalData2];
 
-  openModal() {
-    this.modalType = 'warning';
-    this.isModalOpen = true;
+  // Advanced Search Modal State
+  isSearchModalOpen = false;
+  activeSearchTable: 1 | 2 = 1;
+  searchFilters: Record<string, string> = {};
+
+  get activeColumns() {
+    return this.activeSearchTable === 1 ? this.tableColumns1 : this.tableColumns2;
   }
 
+  openAdvancedSearch(tableNum: 1 | 2) {
+    this.activeSearchTable = tableNum;
+    this.searchFilters = {};
+    this.isSearchModalOpen = true;
+  }
+
+  applyAdvancedSearch() {
+    const filters = this.searchFilters;
+    
+    if (this.activeSearchTable === 1) {
+      this.tableData1 = this.originalData1.filter(item => {
+        return Object.keys(filters).every(key => {
+          if (!filters[key]) return true;
+          return String((item as any)[key]).toLowerCase().includes(filters[key].toLowerCase());
+        });
+      });
+    } else {
+      this.tableData2 = this.originalData2.filter(item => {
+        return Object.keys(filters).every(key => {
+          if (!filters[key]) return true;
+          return String((item as any)[key]).toLowerCase().includes(filters[key].toLowerCase());
+        });
+      });
+    }
+    
+    this.isSearchModalOpen = false;
+  }
+
+  // Generic Modals
   openDangerModal() {
     this.modalType = 'danger';
     this.isModalOpen = true;
   }
 
-  onModalConfirm(searchQuery: string) {
-    console.log('Modal confirmado con query:', searchQuery);
+  onModalConfirm(query: string) {
     this.isModalOpen = false;
   }
 }

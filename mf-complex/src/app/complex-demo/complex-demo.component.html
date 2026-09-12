@@ -58,26 +58,46 @@
     </div>
 
     <!-- Main Content Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       
-      <!-- Table Area -->
-      <div class="lg:col-span-2 space-y-6">
-        <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
+      <!-- Table 1: Transactions -->
+      <div class="space-y-6">
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl flex flex-col h-full">
           <div class="px-6 py-5 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
             <h2 class="text-xl font-bold text-white">Últimas Operaciones</h2>
-            <button class="text-sm text-blue-400 hover:text-blue-300 font-medium">Ver todo &rarr;</button>
+            <button (click)="openAdvancedSearch(1)" class="text-sm px-3 py-1 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg font-medium border border-blue-500/20 transition-colors">
+              Filtro Avanzado
+            </button>
           </div>
-          <div class="p-6">
+          <div class="p-6 flex-1">
             <core-data-table 
-              [data]="tableData" 
-              [columns]="tableColumns">
+              [data]="tableData1" 
+              [columns]="tableColumns1">
             </core-data-table>
           </div>
         </div>
       </div>
 
-      <!-- Accordion Area -->
+      <!-- Table 2: Products -->
       <div class="space-y-6">
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl flex flex-col h-full">
+          <div class="px-6 py-5 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-white">Inventario (SKUs)</h2>
+            <button (click)="openAdvancedSearch(2)" class="text-sm px-3 py-1 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 rounded-lg font-medium border border-amber-500/20 transition-colors">
+              Filtro Avanzado
+            </button>
+          </div>
+          <div class="p-6 flex-1">
+            <core-data-table 
+              [data]="tableData2" 
+              [columns]="tableColumns2">
+            </core-data-table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accordion Area (Spans full width below tables) -->
+      <div class="lg:col-span-2 space-y-6">
         <div class="bg-slate-800 rounded-2xl border border-slate-700 p-6 shadow-xl">
           <h2 class="text-xl font-bold text-white mb-6">Preguntas Frecuentes</h2>
           <app-accordion [items]="accordionItems"></app-accordion>
@@ -89,19 +109,33 @@
   </div>
 </div>
 
-<!-- Reusable Modal Instance -->
+<!-- Generic Alert Modal Instance -->
 <app-modal 
   [isOpen]="isModalOpen" 
   [type]="modalType"
-  [title]="modalType === 'danger' ? 'Acción Peligrosa' : 'Confirmación Requerida'"
-  [showSearch]="modalType === 'warning'"
+  title="Acción Peligrosa"
   (close)="isModalOpen = false"
   (confirm)="onModalConfirm($event)">
-  
-  @if (modalType === 'danger') {
-    <p class="text-red-400 font-medium mb-2">¡Cuidado! Estás a punto de ejecutar una operación destructiva.</p>
-    <p>Esta acción no se puede deshacer. Todos los datos asociados a este registro serán eliminados permanentemente del servidor.</p>
-  } @else {
-    <p>Por favor, confirma que deseas continuar con esta operación. Si necesitas buscar un ID específico antes de confirmar, utiliza el buscador de abajo.</p>
-  }
+  <p class="text-red-400 font-medium mb-2">¡Cuidado! Estás a punto de ejecutar una operación destructiva.</p>
+  <p>Esta acción no se puede deshacer. Todos los datos asociados a este registro serán eliminados permanentemente del servidor.</p>
+</app-modal>
+
+<!-- Advanced Search Modal Instance -->
+<app-modal 
+  [isOpen]="isSearchModalOpen" 
+  type="info"
+  title="Búsqueda Avanzada"
+  (close)="isSearchModalOpen = false"
+  (confirm)="applyAdvancedSearch()">
+  <p class="mb-4 text-slate-300">Filtra los datos por columnas específicas. Este formulario se generó dinámicamente según la tabla seleccionada.</p>
+  <div class="space-y-4">
+    @for (col of activeColumns; track col.key) {
+      <div>
+        <label class="block text-sm font-medium text-slate-400 mb-1">{{ col.label }}</label>
+        <input type="text" [(ngModel)]="searchFilters[col.key]" 
+               class="block w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-900/50 text-slate-200 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+               [placeholder]="'Filtrar por ' + col.label.toLowerCase() + '...'">
+      </div>
+    }
+  </div>
 </app-modal>
