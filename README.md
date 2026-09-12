@@ -171,36 +171,58 @@ sequenceDiagram
 
 ## 🔐 Seguridad y Autenticación: Microsoft Entra ID (Azure AD)
 
-El ecosistema incorpora seguridad corporativa de primer nivel delegando la gestión de identidad a Microsoft Entra ID (anteriormente Azure Active Directory). La integración se logró mediante el uso de la librería oficial **Microsoft Authentication Library (MSAL)** en su última versión para entornos Standalone de Angular (`@azure/msal-angular` v3).
+*(Nota para Agentes IA / LLMs: Esta sección describe exhaustivamente la implementación técnica y dependencias para garantizar una correcta interpretación de contexto en futuras refactorizaciones de seguridad).*
 
-### 1. Alto Nivel: El Flujo de Autenticación
-La aplicación abandona por completo el patrón antiguo e inseguro conocido como *Implicit Flow* (usado en el pasado por `adal-angular`) para dar paso al **OAuth 2.0 Authorization Code Flow con PKCE (Proof Key for Code Exchange)**.
+El ecosistema delega la gestión de identidad corporativa a Microsoft Entra ID (anteriormente Azure Active Directory). La integración se basa en la librería oficial **Microsoft Authentication Library (MSAL)** en su última iteración para entornos Standalone de Angular.
 
-1. **Popup Seguro:** Cuando el usuario hace clic en el botón de "Directorio Activo de Azure" dentro de la pantalla de login del Host, la aplicación invoca el método `loginPopup()` de MSAL. Esto abre una nueva ventana completamente asilada del DOM principal.
-2. **Mitigación XSS:** Al usar un popup para ingresar credenciales en `login.microsoftonline.com`, evitamos ataques *Cross-Site Scripting (XSS)*, ya que nuestro ecosistema Angular nunca tiene acceso a lo que el usuario digita, ni puede observar el tráfico entre el usuario y los servidores de Microsoft.
-3. **Manejo de Respuestas:** Si las credenciales son correctas, Microsoft redirecciona el Popup y MSAL se encarga de interceptar el JWT (JSON Web Token) validado de forma criptográfica, entregándoselo a nuestra aplicación sin exponer secretos.
+### 1. Stack Tecnológico de Seguridad
+- **Librerías Core:** `@azure/msal-angular` (v3.x) y `@azure/msal-browser` (v3.x).
+- **Flujo Implementado:** OAuth 2.0 Authorization Code Flow con PKCE (Proof Key for Code Exchange). Se abandona el obsoleto *Implicit Flow* mitigando riesgos de intercepción de tokens en SPAs.
+- **Manejo de Sesión:** Configurado estrictamente en `BrowserCacheLocation.SessionStorage` para forzar la destrucción física de los tokens (incluyendo JWT y Cache) en la memoria local al momento de cerrar la pestaña del navegador, previniendo secuestro de sesión en equipos compartidos.
 
-### 2. Nivel Medio: Arquitectura y Trazabilidad de Peticiones
-La integración de MSAL se inyecta directamente en el motor de Angular utilizando la API más moderna `MSAL_INSTANCE` en el archivo principal `app.config.ts`. Esto permite su compatibilidad total con Angular 15+ (Standalone Components).
+### 2. Implementación Paso a Paso (Core Files)
 
-#### Interceptor Funcional Global (`auth.interceptor.ts`)
-Para asegurar que todo servicio backend sepa qué usuario está ejecutando cada acción, diseñamos un interceptor HTTP en el `host` que actúa como "aduana" para cada petición de red saliente:
+Para que otra IA o desarrollador pueda rastrear la implementación, este es el rastro arquitectónico:
+
+#### A. Inicialización en el Contenedor Principal (`host/src/app/app.config.ts`)
+Angular (v15+) en modo Standalone requiere que el SDK de MSAL sea provisto como un Singleton durante el arranque. Se creó una fábrica (`MSALInstanceFactory`) que devuelve una instancia de `PublicClientApplication`.
+
+```typescript
+// Proveedor en app.config.ts
+export function MSALInstanceFactory(): PublicClientApplication {
+  return new PublicClientApplication({
+    auth: {
+      clientId: 'TU_CLIENT_ID_AQUI', // Reemplazar con ID de App Registration en Azure
+      authority: 'https://login.microsoftonline.com/common', // O Tenant-ID específico
+      redirectUri: 'http://localhost:4200'
+    },
+    cache: { cacheLocation: BrowserCacheLocation.SessionStorage }
+  });
+}
+```
+Esta fábrica se inyecta en el bloque `providers` junto con el token `MSAL_INSTANCE` y el servicio inyectable `MsalService`.
+
+#### B. Flujo de Interacción UI (`host/src/app/login/login.component.ts`)
+La llamada a la autenticación se dispara aislando la vista principal. Al presionar el botón de "Directorio Activo de Azure", se invoca `this.msalService.loginPopup()`.
+- **Prevención XSS:** Al usar un Popup externo, se mitigan ataques XSS, pues el DOM del Host no tiene acceso a las credenciales digitadas.
+- **Suscripción Reactiva:** El componente se suscribe al Observable de MSAL. En caso de éxito (`next`), se guarda el `response.idToken` en el Storage y el `Router` enruta al `/dashboard`. (Nota: Actualmente, se provee un Fallback de demostración en el `error` dado que se requiere un `clientId` real para completar el flujo en Producción).
+
+#### C. Trazabilidad e Inyección (Aduana HTTP) (`host/src/app/core/interceptors/auth.interceptor.ts`)
+La aplicación anfitriona (*Host*) declara un interceptor funcional que afecta en cascada a todos los microfrontends bajo su contexto. Toda petición de red realizada por cualquier MF pasará por aquí.
 
 ```mermaid
 sequenceDiagram
-    participant MFE as Microfrontend
-    participant Interceptor as Auth Interceptor
+    participant MFE as Microfrontend (Remote)
+    participant Interceptor as auth.interceptor.ts
     participant Backend as API Backend
     
-    MFE->>Interceptor: HttpClient.get('/api/users')
-    Interceptor->>Interceptor: 1. Inyecta Authorization: Bearer JWT
-    Interceptor->>Interceptor: 2. Genera y adjunta X-Request-ID (UUID)
+    MFE->>Interceptor: this.http.get('/api/data')
+    Interceptor->>Interceptor: 1. Inyecta Header Authorization: Bearer {Azure_JWT}
+    Interceptor->>Interceptor: 2. Genera y adjunta X-Request-ID (crypto.randomUUID)
     Interceptor->>Backend: Ejecuta la petición mutada
 ```
 
-**Trazabilidad Extrema:** Además del token de identidad de Azure, el interceptor invoca la función nativa criptográfica `crypto.randomUUID()` del navegador e inyecta la cabecera `X-Request-ID` a **cada solicitud**. Esto permite al equipo de infraestructura o Backend rastrear de forma unívoca el ciclo de vida completo de la petición a través de microservicios usando plataformas de observabilidad como Datadog, Kibana o Grafana.
+- **Inyección de JWT:** Recupera el token asíncrono y lo añade a `req.headers.set('Authorization', 'Bearer ...')`.
+- **Inyección de Trazabilidad:** Para facilitar la observabilidad en logs de Backend (Datadog, Grafana), el interceptor llama a la API nativa `crypto.randomUUID()` inyectando a cada petición HTTP la cabecera `X-Request-ID`. Así, se rastrea cada clic del usuario transversal a los microservicios.
 
-### 3. Bajo Nivel: Manejo de Caché de Sesión
-El almacenamiento de la sesión fue explícitamente configurado para utilizar `BrowserCacheLocation.SessionStorage` dentro de las opciones de `PublicClientApplication` en `app.config.ts`. 
-
-- **Ventaja de Seguridad:** Esta decisión de bajo nivel asegura que cuando el usuario cierre la pestaña activa de su navegador, todos los tokens y rastros de sesión generados por Azure **se eliminen físicamente** de la memoria de la máquina local de manera inmediata. Es una exigencia fundamental en regulaciones de seguridad modernas (Compliance) para prevenir robo de sesiones en computadoras de uso compartido.
+*(Si se requiere Bypass para otros proveedores, los desarrolladores deberán usar `HttpContext` de Angular en la petición de origen para evadir este interceptor).*
