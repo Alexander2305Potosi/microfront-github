@@ -141,12 +141,26 @@ export class ComplexDemoComponent {
   }
 
   // Generic Modals
-  openDangerModal() {
-    this.modalType = 'danger';
+  modalTitle = '';
+  modalMessage1 = '';
+  modalMessage2 = '';
+
+  openActionModal(action: 'sync' | 'delete') {
+    if (action === 'delete') {
+      this.modalType = 'danger';
+      this.modalTitle = 'Acción Peligrosa';
+      this.modalMessage1 = '¡Cuidado! Estás a punto de ejecutar una operación destructiva.';
+      this.modalMessage2 = 'Esta acción no se puede deshacer. Todos los datos asociados a este registro serán eliminados permanentemente del servidor.';
+    } else {
+      this.modalType = 'warning';
+      this.modalTitle = 'Modificar Ajustes Core';
+      this.modalMessage1 = 'Estás a punto de alterar la configuración global del ecosistema.';
+      this.modalMessage2 = 'Si procedes, todos los Microfrontends podrían perder la sesión actual y ser recargados.';
+    }
     this.isModalOpen = true;
   }
 
-  onModalConfirm(query: string) {
+  onModalConfirm(query?: string) {
     this.isModalOpen = false;
   }
 }

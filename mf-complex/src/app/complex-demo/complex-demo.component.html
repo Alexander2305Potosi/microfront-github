@@ -8,10 +8,10 @@
         <p class="mt-2 text-lg text-slate-400">Demostrando integración de múltiples componentes de interfaz avanzados.</p>
       </div>
       <div class="flex space-x-4">
-        <button (click)="openModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-xl font-medium transition-colors shadow-sm">
+        <button (click)="openActionModal('sync')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-xl font-medium transition-colors shadow-sm">
           Ajustes
         </button>
-        <button (click)="openDangerModal()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all hover:-translate-y-0.5">
+        <button (click)="openActionModal('delete')" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all hover:-translate-y-0.5">
           Nueva Operación
         </button>
       </div>
@@ -127,11 +127,13 @@
 <app-modal 
   [isOpen]="isModalOpen" 
   [type]="modalType"
-  title="Acción Peligrosa"
+  [title]="modalTitle"
   (close)="isModalOpen = false"
   (confirm)="onModalConfirm($event)">
-  <p class="text-red-400 font-medium mb-2">¡Cuidado! Estás a punto de ejecutar una operación destructiva.</p>
-  <p>Esta acción no se puede deshacer. Todos los datos asociados a este registro serán eliminados permanentemente del servidor.</p>
+  <p [class]="modalType === 'danger' ? 'text-red-400 font-medium mb-2' : 'text-amber-400 font-medium mb-2'">
+    {{ modalMessage1 }}
+  </p>
+  <p class="text-slate-300">{{ modalMessage2 }}</p>
 </app-modal>
 
 <!-- Advanced Search Modal Instance -->
