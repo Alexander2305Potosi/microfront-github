@@ -259,6 +259,348 @@
           }
         }
       }
+    },
+    "mf-users": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "mf-users",
+      "sourceRoot": "mf-users/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {
+            "browser": "mf-users/src/main.ts",
+            "tsConfig": "mf-users/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "mf-users/public"
+              }
+            ],
+            "styles": [
+              "mf-users/src/styles.scss"
+            ],
+            "ssr": false
+          },
+          "configurations": {
+            "production": {
+              "target": "mf-users:esbuild:production"
+            },
+            "development": {
+              "target": "mf-users:esbuild:development",
+              "dev": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {
+            "target": "mf-users:serve-original:development",
+            "rebuildDelay": 500,
+            "dev": true,
+            "cacheExternalArtifacts": false,
+            "port": 4202
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test"
+        },
+        "esbuild": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "mf-users/src/main.ts",
+            "tsConfig": "mf-users/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "mf-users/public"
+              }
+            ],
+            "styles": [
+              "mf-users/src/styles.scss"
+            ],
+            "security": {
+              "allowedHosts": []
+            },
+            "polyfills": [
+              "es-module-shims"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve-original": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "mf-users:esbuild:production"
+            },
+            "development": {
+              "buildTarget": "mf-users:esbuild:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4202
+          }
+        }
+      }
+    },
+    "mf-repos": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "mf-repos",
+      "sourceRoot": "mf-repos/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {
+            "browser": "mf-repos/src/main.ts",
+            "tsConfig": "mf-repos/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "mf-repos/public"
+              }
+            ],
+            "styles": [
+              "mf-repos/src/styles.scss"
+            ],
+            "ssr": false
+          },
+          "configurations": {
+            "production": {
+              "target": "mf-repos:esbuild:production"
+            },
+            "development": {
+              "target": "mf-repos:esbuild:development",
+              "dev": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {
+            "target": "mf-repos:serve-original:development",
+            "rebuildDelay": 500,
+            "dev": true,
+            "cacheExternalArtifacts": false,
+            "port": 4203
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test"
+        },
+        "esbuild": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "mf-repos/src/main.ts",
+            "tsConfig": "mf-repos/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "mf-repos/public"
+              }
+            ],
+            "styles": [
+              "mf-repos/src/styles.scss"
+            ],
+            "security": {
+              "allowedHosts": []
+            },
+            "polyfills": [
+              "es-module-shims"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve-original": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "mf-repos:esbuild:production"
+            },
+            "development": {
+              "buildTarget": "mf-repos:esbuild:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4203
+          }
+        }
+      }
+    },
+    "mf-complex": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      },
+      "root": "mf-complex",
+      "sourceRoot": "mf-complex/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {
+            "browser": "mf-complex/src/main.ts",
+            "tsConfig": "mf-complex/tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "mf-complex/public"
+              }
+            ],
+            "styles": [
+              "mf-complex/src/styles.scss"
+            ],
+            "ssr": false
+          },
+          "configurations": {
+            "production": {
+              "target": "mf-complex:esbuild:production"
+            },
+            "development": {
+              "target": "mf-complex:esbuild:development",
+              "dev": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-architects/native-federation:build",
+          "options": {
+            "target": "mf-complex:serve-original:development",
+            "rebuildDelay": 500,
+            "dev": true,
+            "cacheExternalArtifacts": false,
+            "port": 4204
+          }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test"
+        },
+        "esbuild": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "mf-complex/src/main.ts",
+            "tsConfig": "mf-complex/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "mf-complex/public"
+              }
+            ],
+            "styles": [
+              "mf-complex/src/styles.scss"
+            ],
+            "security": {
+              "allowedHosts": []
+            },
+            "polyfills": [
+              "es-module-shims"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve-original": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "mf-complex:esbuild:production"
+            },
+            "development": {
+              "buildTarget": "mf-complex:esbuild:development"
+            }
+          },
+          "defaultConfiguration": "development",
+          "options": {
+            "port": 4204
+          }
+        }
+      }
     }
   }
 }

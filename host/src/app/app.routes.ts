@@ -13,14 +13,14 @@ export const routes: Routes = [
   },
   { 
     path: 'github-users', 
-    loadComponent: () => loadRemoteModule('remote', './GithubUsers').then(m => m.GithubUsersComponent) 
+    loadComponent: () => loadRemoteModule('mf-users', './GithubUsers').then(m => m.GithubUsersComponent) 
   },
   { 
     path: 'github-repos', 
-    loadComponent: () => loadRemoteModule('remote', './GithubRepos').then(m => m.GithubReposComponent) 
+    loadComponent: () => loadRemoteModule('mf-repos', './GithubRepos').then(m => m.GithubReposComponent) 
   },
   { 
     path: 'complex-demo', 
-    loadComponent: () => loadRemoteModule('remote', './ComplexDemo').then(m => m.ComplexDemoComponent) 
+    loadComponent: () => loadRemoteModule('mf-complex', './ComplexDemo').then(m => m.ComplexDemoComponent) 
   }
 ];
