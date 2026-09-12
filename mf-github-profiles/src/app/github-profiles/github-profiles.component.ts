@@ -1,4 +1,6 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 
 import { CoreDataTableComponent, CoreStatCardComponent } from 'core-ui';
 
@@ -9,6 +11,8 @@ import { CoreDataTableComponent, CoreStatCardComponent } from 'core-ui';
   templateUrl: './github-profiles.component.html',
 })
 export class GithubProfilesComponent implements OnInit {
+  private http = inject(HttpClient);
+  
   users = signal<any[]>([]);
   loading = signal(true);
 
@@ -22,9 +26,16 @@ export class GithubProfilesComponent implements OnInit {
   ];
 
   async ngOnInit() {
+    await this.fetchUsers();
+  }
+  
+  async fetchUsers() {
+    this.loading.set(true);
     try {
-      const response = await fetch('https://api.github.com/users?per_page=15');
-      const data = await response.json();
+      // Usamos HttpClient para que la petición pase por el interceptor del Host.
+      // El interceptor identificará que es "api.github.com" y NO le enviará el token de Azure,
+      // pero SÍ enviará el X-Request-ID (UUID) por trazabilidad.
+      const data = await firstValueFrom(this.http.get<any[]>('https://api.github.com/users?per_page=15'));
       this.users.set(data);
     } catch (e) {
       console.error('Failed to fetch github users', e);

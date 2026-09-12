@@ -9,14 +9,19 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   // Generar un UUID único para la trazabilidad de esta petición
   const uuid = crypto.randomUUID();
 
-  // Inicializar cabeceras con el UUID
+  // Inicializar cabeceras con el UUID (El UUID siempre se envía por temas de trazabilidad global)
   let headers = req.headers.set('X-Request-ID', uuid);
 
   // Intentar obtener el token de Azure AD
   const token = localStorage.getItem('msal_jwt_token');
 
-  // Si existe el token, añadirlo también
-  if (token) {
+  // DOMAIN WHITELISTING: 
+  // Evaluamos si el destino es un tercero. Por seguridad, NUNCA debemos mandar 
+  // nuestro JWT interno de Azure a APIs externas (ej. GitHub).
+  const isExternalApi = req.url.includes('api.github.com');
+
+  // Si existe el token y no es una API externa, lo añadimos
+  if (token && !isExternalApi) {
     headers = headers.set('Authorization', `Bearer ${token}`);
   }
 
