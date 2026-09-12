@@ -22,6 +22,8 @@
     "@angular/platform-server": "^22.1.6",
     "@angular/router": "^22.1.6",
     "@angular/ssr": "^22.1.6",
+    "@azure/msal-angular": "^6.2.0",
+    "@azure/msal-browser": "^5.21.0",
     "@softarc/native-federation-node": "^3.3.4",
     "cors": "^2.8.5",
     "es-module-shims": "^2.8.4",

@@ -12,4 +12,10 @@ export class LoginComponent {
   login() {
     this.router.navigate(['/dashboard']);
   }
+
+  loginWithAzure() {
+    // Aquí iría la integración real con this.msalService.loginPopup() o loginRedirect()
+    console.log('Iniciando flujo de autenticación con Azure Active Directory...');
+    this.router.navigate(['/dashboard']);
+  }
 }
