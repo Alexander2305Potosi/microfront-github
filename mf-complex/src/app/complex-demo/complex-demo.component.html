@@ -148,18 +148,35 @@
     @for (col of activeColumns; track col.key) {
       <div>
         <label class="block text-sm font-medium text-slate-400 mb-1">{{ col.label }}</label>
-        <input 
-          [type]="col.filterType || 'text'" 
-          [name]="col.key"
-          [(ngModel)]="searchFilters[col.key]" 
-          #inputField="ngModel"
-          [pattern]="col.pattern || ''"
-          class="block w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-900/50 text-slate-200 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
-          [class.border-red-500]="inputField.invalid && inputField.dirty"
-          [placeholder]="'Filtrar por ' + col.label.toLowerCase() + '...'">
         
-        @if (inputField.invalid && inputField.dirty) {
-          <p class="mt-1 text-xs text-red-400">{{ col.patternError || 'Valor inválido' }}</p>
+        @if (col.filterType === 'date-range') {
+          <div class="flex space-x-4">
+            <div class="flex-1">
+              <span class="text-xs text-slate-500 mb-1 block">Desde</span>
+              <input type="date" [name]="col.key + '_start'" [(ngModel)]="searchFilters[col.key + '_start']"
+                     class="block w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-900/50 text-slate-200 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all">
+            </div>
+            <div class="flex-1">
+              <span class="text-xs text-slate-500 mb-1 block">Hasta</span>
+              <input type="date" [name]="col.key + '_end'" [(ngModel)]="searchFilters[col.key + '_end']"
+                     class="block w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-900/50 text-slate-200 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all">
+            </div>
+          </div>
+        } @else {
+          <input 
+            [type]="col.filterType || 'text'" 
+            [name]="col.key"
+            [(ngModel)]="searchFilters[col.key]" 
+            #inputField="ngModel"
+            [pattern]="col.pattern || ''"
+            (keydown)="col.filterType === 'number' ? onNumberKeydown($event) : null"
+            class="block w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-900/50 text-slate-200 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+            [class.border-red-500]="inputField.invalid && inputField.dirty"
+            [placeholder]="col.filterType === 'date' ? '' : 'Filtrar por ' + col.label.toLowerCase() + '...'">
+          
+          @if (inputField.invalid && inputField.dirty) {
+            <p class="mt-1 text-xs text-red-400">{{ col.patternError || 'Valor inválido' }}</p>
+          }
         }
       </div>
     }
