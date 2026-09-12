@@ -2,8 +2,11 @@
 module.exports = {
   content: [
     "./host/src/**/*.{html,ts}",
-    "./remote/src/**/*.{html,ts}",
-    "./projects/core-ui/src/**/*.{html,ts}"
+    "./mf-github-profiles/src/**/*.{html,ts}",
+    "./mf-users/src/**/*.{html,ts}",
+    "./mf-repos/src/**/*.{html,ts}",
+    "./mf-complex/src/**/*.{html,ts}",
+    "./core-ui/src/**/*.{html,ts}"
   ],
   theme: {
     extend: {
