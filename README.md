@@ -164,3 +164,41 @@ sequenceDiagram
   - Si deseas exponer un componente desde el `remote` hacia el exterior, debes declararlo en el archivo `remote/federation.config.js` dentro del bloque `exposes`.
   - El `host` detectará automáticamente el código expuesto si configuras las rutas correctamente.
 - **Pruebas Unitarias:** Ejecuta `npm run test` para correr las pruebas locales de todo el ecosistema y librerías compartidas.
+
+---
+
+## 🔐 Seguridad y Autenticación: Microsoft Entra ID (Azure AD)
+
+El ecosistema incorpora seguridad corporativa de primer nivel delegando la gestión de identidad a Microsoft Entra ID (anteriormente Azure Active Directory). La integración se logró mediante el uso de la librería oficial **Microsoft Authentication Library (MSAL)** en su última versión para entornos Standalone de Angular (`@azure/msal-angular` v3).
+
+### 1. Alto Nivel: El Flujo de Autenticación
+La aplicación abandona por completo el patrón antiguo e inseguro conocido como *Implicit Flow* (usado en el pasado por `adal-angular`) para dar paso al **OAuth 2.0 Authorization Code Flow con PKCE (Proof Key for Code Exchange)**.
+
+1. **Popup Seguro:** Cuando el usuario hace clic en el botón de "Directorio Activo de Azure" dentro de la pantalla de login del Host, la aplicación invoca el método `loginPopup()` de MSAL. Esto abre una nueva ventana completamente asilada del DOM principal.
+2. **Mitigación XSS:** Al usar un popup para ingresar credenciales en `login.microsoftonline.com`, evitamos ataques *Cross-Site Scripting (XSS)*, ya que nuestro ecosistema Angular nunca tiene acceso a lo que el usuario digita, ni puede observar el tráfico entre el usuario y los servidores de Microsoft.
+3. **Manejo de Respuestas:** Si las credenciales son correctas, Microsoft redirecciona el Popup y MSAL se encarga de interceptar el JWT (JSON Web Token) validado de forma criptográfica, entregándoselo a nuestra aplicación sin exponer secretos.
+
+### 2. Nivel Medio: Arquitectura y Trazabilidad de Peticiones
+La integración de MSAL se inyecta directamente en el motor de Angular utilizando la API más moderna `MSAL_INSTANCE` en el archivo principal `app.config.ts`. Esto permite su compatibilidad total con Angular 15+ (Standalone Components).
+
+#### Interceptor Funcional Global (`auth.interceptor.ts`)
+Para asegurar que todo servicio backend sepa qué usuario está ejecutando cada acción, diseñamos un interceptor HTTP en el `host` que actúa como "aduana" para cada petición de red saliente:
+
+```mermaid
+sequenceDiagram
+    participant MFE as Microfrontend
+    participant Interceptor as Auth Interceptor
+    participant Backend as API Backend
+    
+    MFE->>Interceptor: HttpClient.get('/api/users')
+    Interceptor->>Interceptor: 1. Inyecta Authorization: Bearer JWT
+    Interceptor->>Interceptor: 2. Genera y adjunta X-Request-ID (UUID)
+    Interceptor->>Backend: Ejecuta la petición mutada
+```
+
+**Trazabilidad Extrema:** Además del token de identidad de Azure, el interceptor invoca la función nativa criptográfica `crypto.randomUUID()` del navegador e inyecta la cabecera `X-Request-ID` a **cada solicitud**. Esto permite al equipo de infraestructura o Backend rastrear de forma unívoca el ciclo de vida completo de la petición a través de microservicios usando plataformas de observabilidad como Datadog, Kibana o Grafana.
+
+### 3. Bajo Nivel: Manejo de Caché de Sesión
+El almacenamiento de la sesión fue explícitamente configurado para utilizar `BrowserCacheLocation.SessionStorage` dentro de las opciones de `PublicClientApplication` en `app.config.ts`. 
+
+- **Ventaja de Seguridad:** Esta decisión de bajo nivel asegura que cuando el usuario cierre la pestaña activa de su navegador, todos los tokens y rastros de sesión generados por Azure **se eliminen físicamente** de la memoria de la máquina local de manera inmediata. Es una exigencia fundamental en regulaciones de seguridad modernas (Compliance) para prevenir robo de sesiones en computadoras de uso compartido.
