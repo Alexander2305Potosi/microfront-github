@@ -13,6 +13,9 @@ export class CoreDataTableComponent {
     key: string;
     label: string;
     type?: 'text' | 'avatar' | 'badge' | 'link';
+    filterType?: 'text' | 'number' | 'date';
+    pattern?: string;
+    patternError?: string;
   }> = [];
 
   private _data: any[] = [];

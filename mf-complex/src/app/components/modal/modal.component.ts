@@ -13,6 +13,7 @@ export class ModalComponent {
   @Input() title: string = 'Atención';
   @Input() type: 'info' | 'warning' | 'danger' = 'info';
   @Input() showSearch: boolean = false;
+  @Input() confirmDisabled: boolean = false;
   
   @Output() close = new EventEmitter<void>();
   @Output() confirm = new EventEmitter<string>();

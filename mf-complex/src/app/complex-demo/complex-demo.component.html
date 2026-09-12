@@ -139,17 +139,29 @@
   [isOpen]="isSearchModalOpen" 
   type="info"
   title="Búsqueda Avanzada"
+  [confirmDisabled]="searchForm?.invalid || false"
   (close)="isSearchModalOpen = false"
   (confirm)="applyAdvancedSearch()">
-  <p class="mb-4 text-slate-300">Filtra los datos por columnas específicas. Este formulario se generó dinámicamente según la tabla seleccionada.</p>
-  <div class="space-y-4">
+  <p class="mb-4 text-slate-300">Filtra los datos por columnas específicas. Las validaciones (Regex/Tipos) cambian según la tabla.</p>
+  
+  <form #searchForm="ngForm" class="space-y-4">
     @for (col of activeColumns; track col.key) {
       <div>
         <label class="block text-sm font-medium text-slate-400 mb-1">{{ col.label }}</label>
-        <input type="text" [(ngModel)]="searchFilters[col.key]" 
-               class="block w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-900/50 text-slate-200 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
-               [placeholder]="'Filtrar por ' + col.label.toLowerCase() + '...'">
+        <input 
+          [type]="col.filterType || 'text'" 
+          [name]="col.key"
+          [(ngModel)]="searchFilters[col.key]" 
+          #inputField="ngModel"
+          [pattern]="col.pattern || ''"
+          class="block w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-900/50 text-slate-200 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" 
+          [class.border-red-500]="inputField.invalid && inputField.dirty"
+          [placeholder]="'Filtrar por ' + col.label.toLowerCase() + '...'">
+        
+        @if (inputField.invalid && inputField.dirty) {
+          <p class="mt-1 text-xs text-red-400">{{ col.patternError || 'Valor inválido' }}</p>
+        }
       </div>
     }
-  </div>
+  </form>
 </app-modal>

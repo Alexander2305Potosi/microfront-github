@@ -39,9 +39,9 @@ export class ComplexDemoComponent {
 
   // Table 1: Transactions
   tableColumns1 = [
-    { key: 'id', label: 'Transacción' },
-    { key: 'user', label: 'Usuario' },
-    { key: 'amount', label: 'Monto ($)' },
+    { key: 'id', label: 'Transacción', pattern: '^[A-Z]{3}-[0-9]{3}$', patternError: 'Debe ser en formato AAA-123' },
+    { key: 'user', label: 'Usuario', filterType: 'text' as const },
+    { key: 'amount', label: 'Monto ($)', filterType: 'number' as const },
     { key: 'status', label: 'Estado', type: 'badge' as const }
   ];
   originalData1 = [
@@ -54,9 +54,9 @@ export class ComplexDemoComponent {
 
   // Table 2: Products
   tableColumns2 = [
-    { key: 'sku', label: 'SKU' },
-    { key: 'product', label: 'Producto' },
-    { key: 'stock', label: 'Inventario' },
+    { key: 'sku', label: 'SKU', pattern: '^ITM-[0-9]{3}$', patternError: 'El formato debe ser ITM-000' },
+    { key: 'product', label: 'Producto', filterType: 'text' as const },
+    { key: 'stock', label: 'Inventario', filterType: 'number' as const },
     { key: 'price', label: 'Precio', type: 'badge' as const }
   ];
   originalData2 = [
