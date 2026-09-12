@@ -146,9 +146,9 @@
   (confirm)="applyAdvancedSearch()">
   <p class="mb-4 text-slate-300">Filtra los datos por columnas específicas. Las validaciones (Regex/Tipos) cambian según la tabla.</p>
   
-  <form #searchForm="ngForm" class="space-y-4">
+  <form #searchForm="ngForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
     @for (col of activeColumns; track col.key) {
-      <div>
+      <div [class]="col.filterType === 'date-range' ? 'md:col-span-2' : ''">
         <label class="block text-sm font-medium text-slate-400 mb-1">{{ col.label }}</label>
         
         @if (col.filterType === 'date-range') {
