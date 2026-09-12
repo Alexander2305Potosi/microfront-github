@@ -5,6 +5,6 @@ import { GithubProfilesComponent } from './github-profiles/github-profiles.compo
   selector: 'app-root',
   standalone: true,
   imports: [GithubProfilesComponent],
-  template: '<app-github-profiles></app-github-profiles>'
+  templateUrl: './app.component.html'
 })
-export class App {}
+export class AppComponent {}

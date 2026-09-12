@@ -1,0 +1,164 @@
+<div class="min-h-screen bg-gray-950 p-8 font-sans selection:bg-blue-500/30">
+      <div class="max-w-7xl mx-auto space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-6 border-b border-gray-800">
+          <div>
+            <div
+              class="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-bold mb-3"
+            >
+              <span class="flex h-2 w-2 rounded-full bg-blue-500 mr-2 animate-pulse"></span>
+              Microfrontend Remoto Activo
+            </div>
+            <h1 class="text-4xl font-black text-white tracking-tight">
+              Directorio de
+              <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300"
+                >Desarrolladores</span
+              >
+            </h1>
+          </div>
+
+          <a
+            href="/"
+            class="group flex items-center px-5 py-2.5 bg-gray-900 hover:bg-gray-800 border border-gray-700 hover:border-gray-500 rounded-xl text-sm font-bold text-gray-300 transition-all shadow-lg hover:shadow-xl"
+          >
+            <svg
+              width="20"
+              height="20"
+              class="w-5 h-5 mr-2 text-gray-500 group-hover:-translate-x-1 transition-transform"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+            Volver al Host
+          </a>
+        </div>
+
+        <!-- Statistics Widget using Core UI -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <core-stat-card
+            label="Total Usuarios"
+            [value]="users().length"
+            [trend]="12"
+            description="Usuarios cargados en memoria"
+            colorClass="bg-blue-500/20 text-blue-400"
+          >
+            <svg
+              icon
+              width="24"
+              height="24"
+              class="w-6 h-6 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+          </core-stat-card>
+
+          <core-stat-card
+            label="Llamadas API"
+            value="143"
+            [trend]="-5"
+            description="Límites de GitHub API"
+            colorClass="bg-purple-500/20 text-purple-400"
+          >
+            <svg
+              icon
+              width="24"
+              height="24"
+              class="w-6 h-6 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+          </core-stat-card>
+
+          <core-stat-card
+            label="Tiempo de Respuesta"
+            value="340ms"
+            description="Carga asíncrona optimizada"
+            colorClass="bg-emerald-500/20 text-emerald-400"
+          >
+            <svg
+              icon
+              width="24"
+              height="24"
+              class="w-6 h-6 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </core-stat-card>
+        </div>
+
+        <!-- Smart Table using Core UI -->
+        <div class="pt-4">
+          <core-data-table
+            title="Perfiles de GitHub"
+            subtitle="Explora la información detallada de los desarrolladores"
+            [columns]="tableColumns"
+            [data]="users()"
+            [enablePagination]="true"
+            (onFilter)="handleFilter($event)"
+          >
+            <button
+              toolbar-actions
+              class="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition-colors shadow-lg shadow-blue-500/30"
+            >
+              <svg
+                width="16"
+                height="16"
+                class="w-4 h-4 mr-2 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Recargar API
+            </button>
+          </core-data-table>
+        </div>
+
+        @if (loading()) {
+          <div
+            class="fixed inset-0 bg-gray-950/80 backdrop-blur-sm flex justify-center items-center z-50"
+          >
+            <div
+              class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"
+            ></div>
+          </div>
+        }
+      </div>
+    </div>
