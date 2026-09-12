@@ -10,5 +10,17 @@ export const routes: Routes = [
   { 
     path: 'github', 
     loadComponent: () => loadRemoteModule('remote', './GithubProfiles').then(m => m.GithubProfilesComponent) 
+  },
+  { 
+    path: 'github-users', 
+    loadComponent: () => loadRemoteModule('remote', './GithubUsers').then(m => m.GithubUsersComponent) 
+  },
+  { 
+    path: 'github-repos', 
+    loadComponent: () => loadRemoteModule('remote', './GithubRepos').then(m => m.GithubReposComponent) 
+  },
+  { 
+    path: 'complex-demo', 
+    loadComponent: () => loadRemoteModule('remote', './ComplexDemo').then(m => m.ComplexDemoComponent) 
   }
 ];

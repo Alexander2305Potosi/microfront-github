@@ -1,0 +1,31 @@
+<div class="p-6">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+    <core-stat-card
+      title="Microfrontends Activos"
+      value="4"
+      icon="🚀"
+      trend="+2 esta semana">
+    </core-stat-card>
+    
+    <core-stat-card
+      title="Componentes en core-ui"
+      value="2"
+      icon="🧩"
+      trend="Tabla y Tarjetas">
+    </core-stat-card>
+
+    <core-stat-card
+      title="Cobertura de Tests"
+      value="100%"
+      icon="✅"
+      trend="Totalmente estable">
+    </core-stat-card>
+  </div>
+
+  <core-data-table
+    title="Estado Arquitectónico del Monorepo"
+    subtitle="Este componente prueba que la librería core-ui es 100% agnóstica"
+    [columns]="demoColumns"
+    [data]="demoData">
+  </core-data-table>
+</div>

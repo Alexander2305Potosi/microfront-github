@@ -1,0 +1,25 @@
+<div class="p-6">
+  <div class="mb-8 p-6 bg-slate-900 border border-slate-800 rounded-2xl">
+    <h3 class="text-xl font-bold text-white mb-4">Crear Usuario (CRUD en memoria)</h3>
+    <div class="flex gap-4">
+      <input 
+        type="text" 
+        [(ngModel)]="newUserLogin" 
+        placeholder="Nombre de usuario..."
+        class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+      />
+      <button 
+        (click)="addUser()"
+        class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl font-medium transition-colors"
+      >
+        Añadir Usuario
+      </button>
+    </div>
+  </div>
+
+  <core-data-table
+    title="Usuarios Locales"
+    [columns]="tableColumns"
+    [data]="users()">
+  </core-data-table>
+</div>
