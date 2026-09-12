@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { CoreDataTableComponent, CoreStatCardComponent } from 'core-ui';
 import { ModalComponent } from '../components/modal/modal.component';
 import { AlertComponent } from '../components/alert/alert.component';
@@ -10,6 +11,7 @@ import { AccordionComponent, AccordionItem } from '../components/accordion/accor
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     CoreDataTableComponent, 
     CoreStatCardComponent,
     ModalComponent,
@@ -21,6 +23,12 @@ import { AccordionComponent, AccordionItem } from '../components/accordion/accor
 export class ComplexDemoComponent {
   isModalOpen = false;
   modalType: 'info' | 'warning' | 'danger' = 'info';
+
+  openModal() {
+    this.modalType = 'warning';
+    this.isModalOpen = true;
+  }
+
   
   // Accordion
   accordionItems: AccordionItem[] = [
