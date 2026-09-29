@@ -90,23 +90,17 @@ graph LR
 }
 ```
 
-#### 🔍 Aclaración sobre la Compilación y Despliegue de `core-shared`
+#### 🔍 Aclaración sobre la Compilación y Despliegue de `core-shared` (Dynamic Shared Dependency)
 
 **1. ¿Dónde está compilado `<core-data-table>` o el `AuthenticationService`?**
 
-Están compilados dentro de cada Microfrontend (MF) individualmente, no centralizados en un servidor.
-Dado que `core-shared` se importa mediante un alias y no por red, cuando ejecutas el build para `mf-users`, el compilador extrae el código del servicio de autenticación y de la tabla, y los inyecta en el código final de `mf-users`.
+Están compilados como un "Chunk" de JavaScript independiente (ej. `chunk-core-shared.js`) generado dinámicamente gracias a la configuración del bloque `shared` en `federation.config.js`. Cuando el Host o un MF necesitan usar este código, no lo compilan de nuevo dentro de su código fuente, sino que lo cargan en memoria de forma unificada en tiempo de ejecución. 
+En términos de infraestructura, cuando ejecutas `ng build host`, este chunk independiente se genera y se sube al Bucket de AWS S3 del Host.
 
 **2. ¿Qué pasa si cambio o mejoro algo en `core-shared`?**
 
-Si modificas el código hoy, los microfrontends que ya están en Producción (PDN) no se verán afectados en absoluto. 
-
-Para que los cambios surtan efecto: **Solo debes compilar y desplegar el MF que requiere la modificación.**
-
-- **Escenario A (Cambio específico):** Mejoras la tabla agregando un nuevo filtro que solo necesita `mf-users`. Modificas la tabla en `core-shared`, compilas solamente `mf-users` y lo despliegas. `mf-users` tendrá la nueva tabla. `mf-repos` seguirá intacto con la versión vieja. ¡Esto garantiza cero regresiones!
-- **Escenario B (Actualización global):** Encuentras un bug crítico de seguridad en `AuthenticationService`. En este caso, sí deberías compilar y desplegar todos los MFs (o configurar tu CI/CD para que si detecta cambios en `core-shared`, dispare los despliegues de todos los MFs automáticamente).
-
-**En resumen:** Tu arquitectura prioriza la autonomía extrema. Sacrifica un poco de tamaño de red a cambio de la tranquilidad absoluta de que actualizar código compartido jamás va a romper en Producción un Microfrontend que no tenías intención de tocar.
+Gracias a esta arquitectura de Microfrontends de Consumo Dinámico, solucionamos el cuello de botella del CI/CD. 
+Si modificas el código de `core-shared` hoy (ej. agregar una función a la tabla o un nuevo rol de seguridad), **SOLO DEBES COMPILAR Y DESPLEGAR EL HOST**. Los 50 Microfrontends restantes (como `mf-users` o `mf-repos`) heredarán el cambio automáticamente al refrescar el navegador, ya que todos consumen la misma referencia de red sin necesidad de disparar sus pipelines individuales.
 
 ### 3. Bajo Nivel: Organización del Código y Contratos Agnosticos
 

@@ -6,6 +6,7 @@ const config = withNativeFederation({
 
   shared: {
     ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
+    'core-shared': { singleton: true, strictVersion: false },
   },
 
   skip: [
