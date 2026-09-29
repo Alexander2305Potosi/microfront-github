@@ -180,6 +180,78 @@ sequenceDiagram
 
 ---
 
+
+---
+
+## 📝 Guía Práctica: Cómo agregar un nuevo Microfrontend
+
+Si necesitas escalar el ecosistema y agregar un nuevo dominio (por ejemplo, `mf-payments`), debes respetar las 3 capas arquitectónicas. Aquí tienes el paso a paso:
+
+### Paso 1 (Alto Nivel): Creación y Federación
+1. **Generar la aplicación:** Usa el CLI de Angular para generar el nuevo proyecto dentro del monorepo y agrégale Native Federation:
+   ```bash
+   ng g application mf-payments --port 4205
+   ng add @angular-architects/native-federation --project mf-payments --port 4205
+   ```
+2. **Exponer el componente:** En `mf-payments/federation.config.js`, expón tu componente principal (Smart Component):
+   ```javascript
+   exposes: {
+     './PaymentsRouter': './mf-payments/src/app/payments/payments.component.ts',
+   },
+   ```
+3. **Registrarlo en el Host:**
+   - Agrégalo al manifiesto del host (`host/public/federation.manifest.json`).
+   - Crea la ruta perezosa en `host/src/app/app.routes.ts` usando `loadRemoteModule('mf-payments', './PaymentsRouter')`.
+
+### Paso 2 (Nivel Medio): Integrar la Librería Transversal (`core-shared`)
+No reinventes la rueda. El nuevo microfrontend **no debe** tener su propia configuración de MSAL, ni debe crear sus propios botones genéricos o tablas. Debe consumirlos estáticamente de la librería compartida.
+
+En tu `payments.component.ts`:
+```typescript
+import { Component, inject, OnInit } from '@angular/core';
+// 1. Importa TODO desde el alias global
+import { CoreDataTableComponent, AuthenticationService } from 'core-shared'; 
+
+@Component({
+  selector: 'app-payments',
+  standalone: true,
+  imports: [CoreDataTableComponent], // Inyecta la UI
+  templateUrl: './payments.component.html'
+})
+export class PaymentsComponent implements OnInit {
+  private authService = inject(AuthenticationService); // Inyecta la seguridad
+  canRefund = false;
+
+  ngOnInit() {
+    // 2. Utiliza la sesión compartida del navegador mágicamente
+    this.canRefund = this.authService.hasPermission(['mf-refund-payments']);
+  }
+}
+```
+
+### Paso 3 (Bajo Nivel): Lógica de Negocio Aislada
+En el HTML de `mf-payments`, inyecta tus datos específicos de pagos dentro de los *Dumb Components* compartidos:
+```html
+@if (canRefund) {
+  <button class="bg-red-500 text-white">Procesar Reembolso</button>
+}
+
+<core-data-table
+  title="Historial de Pagos"
+  [columns]="paymentColumns"
+  [data]="paymentsData"
+  (search)="fetchPaymentsFromApi($event)">
+</core-data-table>
+```
+*Recuerda:* `core-data-table` no sabe qué es un pago. Tu MF `mf-payments` es el único responsable de llamar a la API de pasarelas de pago y pasarle la data cruda a la tabla.
+
+### Paso 4: Orquestación Final
+Finalmente, abre el `package.json` de la raíz del monorepo y agrega tu nuevo MF al script `start:all` para que arranque concurrentemente junto con el resto del ecosistema:
+```json
+"start:all": "concurrently ... \"NG_DISABLE_VERSION_CHECK=1 ng serve mf-payments\""
+```
+
+
 ## 🛠️ Notas importantes para el desarrollo
 
 - **Tailwind CSS:** Para usar clases de Tailwind, simplemente añádelas en el HTML de los componentes de cualquiera de los proyectos. La compilación se hará automáticamente.
