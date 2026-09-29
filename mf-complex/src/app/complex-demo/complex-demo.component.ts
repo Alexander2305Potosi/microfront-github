@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CoreDataTableComponent, CoreStatCardComponent } from 'core-ui';
+import { CoreDataTableComponent, CoreStatCardComponent } from 'core-shared';
 import { ModalComponent } from '../components/modal/modal.component';
 import { AlertComponent } from '../components/alert/alert.component';
 import { AccordionComponent, AccordionItem } from '../components/accordion/accordion.component';

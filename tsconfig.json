@@ -4,8 +4,8 @@
   "compileOnSave": false,
   "compilerOptions": {
     "paths": {
-      "core-ui": [
-        "./core-ui/src/public-api.ts"
+      "core-shared": [
+        "./core-shared/src/public-api.ts"
       ]
     },
     "strict": true,
@@ -35,10 +35,10 @@
       "path": "./tsconfig.spec.json"
     },
     {
-      "path": "./core-ui/tsconfig.lib.json"
+      "path": "./core-shared/tsconfig.lib.json"
     },
     {
-      "path": "./core-ui/tsconfig.spec.json"
+      "path": "./core-shared/tsconfig.spec.json"
     }
   ]
 }

@@ -120,20 +120,20 @@
         }
       }
     },
-    "core-ui": {
+    "core-shared": {
       "projectType": "library",
-      "root": "core-ui",
-      "sourceRoot": "core-ui/src",
+      "root": "core-shared",
+      "sourceRoot": "core-shared/src",
       "prefix": "lib",
       "architect": {
         "build": {
           "builder": "@angular/build:ng-packagr",
           "configurations": {
             "production": {
-              "tsConfig": "core-ui/tsconfig.lib.prod.json"
+              "tsConfig": "core-shared/tsconfig.lib.prod.json"
             },
             "development": {
-              "tsConfig": "core-ui/tsconfig.lib.json"
+              "tsConfig": "core-shared/tsconfig.lib.json"
             }
           },
           "defaultConfiguration": "production"
@@ -141,7 +141,7 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "tsConfig": "core-ui/tsconfig.spec.json"
+            "tsConfig": "core-shared/tsconfig.spec.json"
           }
         }
       }

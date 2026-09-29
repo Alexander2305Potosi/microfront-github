@@ -2,7 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
-import { CoreDataTableComponent, CoreStatCardComponent } from 'core-ui';
+import { CoreDataTableComponent, CoreStatCardComponent } from 'core-shared';
 
 @Component({
   selector: 'app-github-profiles',

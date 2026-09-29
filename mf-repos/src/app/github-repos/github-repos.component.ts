@@ -1,5 +1,5 @@
 import { Component, signal } from '@angular/core';
-import { CoreDataTableComponent } from 'core-ui';
+import { CoreDataTableComponent } from 'core-shared';
 import { FormsModule } from '@angular/forms';
 
 @Component({

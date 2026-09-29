@@ -57,15 +57,15 @@ graph TD
 - **Restricción estricta:** No se deben crear dependencias directas de red entre MFs (ej. `host <--> remote` para un botón). Si un MFE necesita un componente UI, no debe pedirlo a otro MFE por red para evitar latencia, problemas de caché y puntos únicos de fallo.
 - **Singletons:** Dependencias pesadas (`@angular/core`, `rxjs`, `tailwindcss`) están configuradas como `shared` en `federation.config.js` para cargarse una sola vez.
 
-### 2. Nivel Medio: Librería Compartida (`core-ui`) en el Workspace
-Para compartir la tabla y otros componentes complejos entre el `host` y los diferentes MFs, se utiliza una **librería interna estática** en el Monorepo. No se publica como librería NPM, ni como artefacto independiente, ni tiene pipeline propio.
+### 2. Nivel Medio: Librería Compartida Transversal (`core-shared`)
+Para compartir la lógica transversal (como la Autenticación, Tablas visuales y componentes complejos) entre el `host` y los diferentes MFs, se utiliza una **librería interna estática (Shared Core Library)** en el Monorepo. No se publica como librería NPM, ni como artefacto independiente, ni tiene pipeline de despliegue propio.
 
 ```mermaid
 graph LR
     subgraph Workspace Monorepo
         A[Host MFE]
         B[Remote MFE]
-        C((Librería 'core-ui'))
+        C((Librería 'core-shared'))
     end
     
     A -->|Inyección en Build-Time| C
@@ -74,50 +74,48 @@ graph LR
     style C fill:#f9f,stroke:#333,stroke-width:2px
 ```
 
-- **Ubicación Física:** `./core-ui/`
-- **Configuración TS (El Contrato de Consumo):** El archivo `tsconfig.json` raíz crea el alias `"core-ui"` apuntando directamente a `./core-ui/src/public-api.ts`.
-- **Estrategia de compilación:** Cuando un MF requiere usar la tabla, importa este alias. Al construir el proyecto, el pipeline de compilación del MF en turno toma el código fuente de `core-ui` y **lo inyecta estáticamente en su propio bundle**.
+- **Ubicación Física:** `./core-shared/` (Contiene subdominios como `/ui` y `/auth`)
+- **Configuración TS (El Contrato de Consumo):** El archivo `tsconfig.json` raíz crea el alias `"core-shared"` apuntando directamente a `./core-shared/src/public-api.ts`.
+- **Estrategia de compilación (Tree Shaking):** Cuando un MF requiere usar un componente visual o validar permisos de seguridad, importa este alias. Al construir el proyecto, el compilador (esbuild) aplica *Tree Shaking*: extrae únicamente la porción de código exacta que se usó y **la inyecta estáticamente en el bundle final del MF**.
 ```json
 // tsconfig.json (Raíz)
 {
   "compilerOptions": {
     "paths": {
-      "core-ui": [
-        "./core-ui/src/public-api.ts"
+      "core-shared": [
+        "./core-shared/src/public-api.ts"
       ]
     }
   }
 }
 ```
 
-#### 🔍 Aclaración sobre la Compilación y Despliegue de `core-ui`
+#### 🔍 Aclaración sobre la Compilación y Despliegue de `core-shared`
 
-**1. ¿Dónde está compilado `<core-data-table>`?**
+**1. ¿Dónde está compilado `<core-data-table>` o el `AuthenticationService`?**
 
-Está compilado dentro de cada Microfrontend (MF) individualmente, no en el host.
-Dado que `core-ui` se importa mediante un alias en el `tsconfig.json` y no está en la configuración de Module Federation, cuando ejecutas el comando de build para `mf-users`, el compilador toma el código fuente de `<core-data-table>` y lo inyecta de forma estática en el bundle (código final) de `mf-users`.
+Están compilados dentro de cada Microfrontend (MF) individualmente, no centralizados en un servidor.
+Dado que `core-shared` se importa mediante un alias y no por red, cuando ejecutas el build para `mf-users`, el compilador extrae el código del servicio de autenticación y de la tabla, y los inyecta en el código final de `mf-users`.
 
-Es como si hubieras copiado y pegado el código de la tabla dentro de cada MF justo antes de compilarlo.
+**2. ¿Qué pasa si cambio o mejoro algo en `core-shared`?**
 
-**2. ¿Qué pasa si cambio o mejoro `<core-data-table>` en el código?**
+Si modificas el código hoy, los microfrontends que ya están en Producción (PDN) no se verán afectados en absoluto. 
 
-Si modificas el código de la tabla hoy, los microfrontends que ya están en Producción (PDN) no se verán afectados en absoluto. Ellos seguirán funcionando con la "versión anterior" de la tabla con la que fueron compilados.
+Para que los cambios surtan efecto: **Solo debes compilar y desplegar el MF que requiere la modificación.**
 
-Para responder a la pregunta directa: **Solo debes compilar y desplegar el MF que requiere la modificación.**
+- **Escenario A (Cambio específico):** Mejoras la tabla agregando un nuevo filtro que solo necesita `mf-users`. Modificas la tabla en `core-shared`, compilas solamente `mf-users` y lo despliegas. `mf-users` tendrá la nueva tabla. `mf-repos` seguirá intacto con la versión vieja. ¡Esto garantiza cero regresiones!
+- **Escenario B (Actualización global):** Encuentras un bug crítico de seguridad en `AuthenticationService`. En este caso, sí deberías compilar y desplegar todos los MFs (o configurar tu CI/CD para que si detecta cambios en `core-shared`, dispare los despliegues de todos los MFs automáticamente).
 
-- **Escenario A (Cambio específico):** Mejoras la tabla agregando un nuevo filtro que solo necesita `mf-users`. Modificas la tabla en `core-ui`, compilas solamente `mf-users` y lo despliegas. `mf-users` tendrá la nueva tabla. `mf-repos` y los demás seguirán intactos con la versión vieja. ¡Esto garantiza cero regresiones!
-- **Escenario B (Actualización global):** Encuentras un bug crítico en la tabla o haces un rediseño visual (ej. cambiar los colores de Tailwind) que quieres que todos tengan. En este caso, sí deberías compilar y desplegar todos los MFs (o configurar tu CI/CD para que si detecta cambios en la carpeta `core-ui`, dispare los despliegues de todos los MFs automáticamente).
-
-**En resumen:** Tu arquitectura prioriza la autonomía extrema. Sacrifica un poco de tamaño de red (porque el código de la tabla se descarga repetido por cada MF) a cambio de la tranquilidad absoluta de que actualizar un componente compartido jamás va a romper en Producción un Microfrontend que no tenías intención de tocar.
+**En resumen:** Tu arquitectura prioriza la autonomía extrema. Sacrifica un poco de tamaño de red a cambio de la tranquilidad absoluta de que actualizar código compartido jamás va a romper en Producción un Microfrontend que no tenías intención de tocar.
 
 ### 3. Bajo Nivel: Organización del Código y Contratos Agnosticos
 
-A nivel de código, implementamos una separación estricta: **la UI jamás debe conocer la lógica de negocio ni el dominio de datos.**
+A nivel de código, implementamos una separación estricta: **la UI y los Servicios Transversales jamás deben conocer la lógica de negocio de los MFs.**
 
-#### 3.1. Librería `core-ui` (Dumb Components)
-Ubicada en `core-ui/src/lib/data-table/data-table.component.ts`. Es un componente standalone 100% agnóstico del dominio. Define contratos fuertes (interfaces) que dictan cómo los MFs deben interactuar con él:
+#### 3.1. Librería `core-shared/ui` (Dumb Components)
+Ubicada en `core-shared/src/lib/ui/data-table/data-table.component.ts`. Es un componente standalone 100% agnóstico del dominio. Define contratos fuertes:
 ```typescript
-// Contrato base de la tabla (core-ui/src/lib/...)
+// Contrato base de la tabla (core-shared/src/lib/ui/...)
 export interface CoreTableColumn {
   key: string;
   label: string;
@@ -149,7 +147,7 @@ Además, aplicamos una rígida **Separación de Responsabilidades (SoC)**. Ning�
 sequenceDiagram
     participant MFE as Remote (Smart Component)
     participant API as GitHub API
-    participant Table as core-ui (Dumb Component)
+    participant Table as core-shared (Dumb Component)
     
     MFE->>API: 1. Petición HTTP (Buscar Usuarios)
     API-->>MFE: 2. Respuesta JSON
@@ -175,7 +173,7 @@ sequenceDiagram
 
 #### 3.3. Testing Unitario Aislado (Jest Zoneless)
 - **Configuración Moderna:** Configuramos el ecosistema para correr en modo *Zoneless* (`jest-preset-angular/setup-env/zoneless`), aprovechando la arquitectura ultramoderna de Angular 18+ para hacer el testing extremadamente rápido (pasando múltiples suites completas en escasos milisegundos) y sin dependencias mágicas en el DOM.
-- **Aislamiento de Componentes Core:** La librería `core-ui` posee pruebas unitarias que validan las interacciones del DOM y la correcta emisión de los `@Input`/`@Output`, asegurando que su uso sea seguro para todos los MFs.
+- **Aislamiento de Componentes Core:** La librería `core-shared` posee pruebas unitarias que validan las interacciones del DOM y la correcta emisión de los `@Input`/`@Output`, asegurando que su uso sea seguro para todos los MFs.
 - **Simulación de Interacciones de UI (Smart Components):** En microfrontends complejos (`mf-complex`), testeamos programáticamente eventos reales del usuario, validando por ejemplo que un evento `KeyboardEvent` de tipo numérico dispare funciones preventivas (`preventDefault()`), asegurando un UX robusto y a prueba de errores.
 - **Pruebas de Red y Seguridad (Interceptores):** Aseguramos la fiabilidad de nuestra "aduana" HTTP (`auth.interceptor.ts`) utilizando `HttpTestingController` de Angular. Simulamos peticiones ficticias e interceptamos su salida para asertar matemáticamente mediante tests que las cabeceras `Authorization` y `X-Request-ID` han sido mutadas e insertadas correctamente en cada request. Para evitar colisiones en CI/CD, mockeamos APIs criptográficas nativas del entorno NodeJS como `crypto.randomUUID`.
 - **Mocks de Librerías Externas (MSAL):** Para componentes integrados a proveedores corporativos (como `login.component.ts`), simulamos por completo el SDK oficial (`MsalService`) usando `jest.spyOn()` e inyección de valores ficticios mediante dependencias (Ej: devolviendo `of({ idToken: 'fake' })`). Esto nos permite validar que nuestro código procese correctamente el inicio de sesión y navegue al Dashboard sin llegar a realizar peticiones verdaderas a los servidores de Microsoft durante los tests automáticos.

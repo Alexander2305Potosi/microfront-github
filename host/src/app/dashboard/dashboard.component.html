@@ -81,30 +81,32 @@
           </div>
 
           <!-- Remote Module Launcher (GitHub) -->
-          <div class="relative group bg-slate-900/50 backdrop-blur-lg border border-slate-800 rounded-3xl p-8 overflow-hidden hover:border-purple-500/50 transition-colors duration-500 shadow-2xl">
-            <!-- Magic glow effect -->
-            <div class="absolute inset-0 bg-gradient-to-br from-purple-600/10 via-transparent to-pink-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <div class="absolute -top-24 -right-24 w-48 h-48 bg-purple-500 rounded-full mix-blend-screen filter blur-[80px] opacity-20 group-hover:opacity-50 transition-opacity duration-700"></div>
-            
-            <div class="relative z-10 h-full flex flex-col">
-              <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform duration-500">
-                <svg width="28" height="28" class="w-7 h-7 shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+          @if (hasGithubProfileRole) {
+            <div class="relative group bg-slate-900/50 backdrop-blur-lg border border-slate-800 rounded-3xl p-8 overflow-hidden hover:border-purple-500/50 transition-colors duration-500 shadow-2xl">
+              <!-- Magic glow effect -->
+              <div class="absolute inset-0 bg-gradient-to-br from-purple-600/10 via-transparent to-pink-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div class="absolute -top-24 -right-24 w-48 h-48 bg-purple-500 rounded-full mix-blend-screen filter blur-[80px] opacity-20 group-hover:opacity-50 transition-opacity duration-700"></div>
+              
+              <div class="relative z-10 h-full flex flex-col">
+                <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform duration-500">
+                  <svg width="28" height="28" class="w-7 h-7 shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                </div>
+                
+                <h3 class="text-2xl font-bold text-white mb-2">MF: Profiles</h3>
+                <p class="text-slate-400 text-sm flex-grow leading-relaxed">
+                  Lista de usuarios pública de GitHub.
+                </p>
+                
+                <a routerLink="/github" class="mt-6 w-full relative inline-flex items-center justify-center px-6 py-3.5 text-sm font-bold text-white transition-all duration-300 bg-slate-800 border border-slate-700 rounded-xl hover:bg-slate-700 hover:border-purple-500 hover:shadow-[0_0_20px_rgba(168,85,247,0.3)] group/btn overflow-hidden">
+                  <span class="absolute w-0 h-0 transition-all duration-500 ease-out bg-purple-500 rounded-full group-hover/btn:w-56 group-hover/btn:h-56 opacity-10"></span>
+                  <span class="relative flex items-center text-base">
+                    Ejecutar Microfrontend
+                    <svg width="20" height="20" class="w-5 h-5 shrink-0 ml-2 group-hover/btn:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                  </span>
+                </a>
               </div>
-              
-              <h3 class="text-2xl font-bold text-white mb-2">MF: Profiles</h3>
-              <p class="text-slate-400 text-sm flex-grow leading-relaxed">
-                Lista de usuarios pública de GitHub.
-              </p>
-              
-              <a routerLink="/github" class="mt-6 w-full relative inline-flex items-center justify-center px-6 py-3.5 text-sm font-bold text-white transition-all duration-300 bg-slate-800 border border-slate-700 rounded-xl hover:bg-slate-700 hover:border-purple-500 hover:shadow-[0_0_20px_rgba(168,85,247,0.3)] group/btn overflow-hidden">
-                <span class="absolute w-0 h-0 transition-all duration-500 ease-out bg-purple-500 rounded-full group-hover/btn:w-56 group-hover/btn:h-56 opacity-10"></span>
-                <span class="relative flex items-center text-base">
-                  Ejecutar Microfrontend
-                  <svg width="20" height="20" class="w-5 h-5 shrink-0 ml-2 group-hover/btn:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                </span>
-              </a>
             </div>
-          </div>
+          }
           
           <!-- Remote Module Launcher (GitHub Users) -->
           <div class="relative group bg-slate-900/50 backdrop-blur-lg border border-slate-800 rounded-3xl p-8 overflow-hidden hover:border-blue-500/50 transition-colors duration-500 shadow-2xl">

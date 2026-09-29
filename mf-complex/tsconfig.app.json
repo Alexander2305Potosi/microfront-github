@@ -13,7 +13,7 @@
     "src/**/*.spec.ts"
   ],
   "files": [
-    "../core-ui/src/public-api.ts",
+    "../core-shared/src/public-api.ts",
     "src/app/complex-demo/complex-demo.component.ts"
   ]
 }
