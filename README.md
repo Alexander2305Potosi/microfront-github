@@ -90,6 +90,26 @@ graph LR
 }
 ```
 
+#### 🔍 Aclaración sobre la Compilación y Despliegue de `core-ui`
+
+**1. ¿Dónde está compilado `<core-data-table>`?**
+
+Está compilado dentro de cada Microfrontend (MF) individualmente, no en el host.
+Dado que `core-ui` se importa mediante un alias en el `tsconfig.json` y no está en la configuración de Module Federation, cuando ejecutas el comando de build para `mf-users`, el compilador toma el código fuente de `<core-data-table>` y lo inyecta de forma estática en el bundle (código final) de `mf-users`.
+
+Es como si hubieras copiado y pegado el código de la tabla dentro de cada MF justo antes de compilarlo.
+
+**2. ¿Qué pasa si cambio o mejoro `<core-data-table>` en el código?**
+
+Si modificas el código de la tabla hoy, los microfrontends que ya están en Producción (PDN) no se verán afectados en absoluto. Ellos seguirán funcionando con la "versión anterior" de la tabla con la que fueron compilados.
+
+Para responder a la pregunta directa: **Solo debes compilar y desplegar el MF que requiere la modificación.**
+
+- **Escenario A (Cambio específico):** Mejoras la tabla agregando un nuevo filtro que solo necesita `mf-users`. Modificas la tabla en `core-ui`, compilas solamente `mf-users` y lo despliegas. `mf-users` tendrá la nueva tabla. `mf-repos` y los demás seguirán intactos con la versión vieja. ¡Esto garantiza cero regresiones!
+- **Escenario B (Actualización global):** Encuentras un bug crítico en la tabla o haces un rediseño visual (ej. cambiar los colores de Tailwind) que quieres que todos tengan. En este caso, sí deberías compilar y desplegar todos los MFs (o configurar tu CI/CD para que si detecta cambios en la carpeta `core-ui`, dispare los despliegues de todos los MFs automáticamente).
+
+**En resumen:** Tu arquitectura prioriza la autonomía extrema. Sacrifica un poco de tamaño de red (porque el código de la tabla se descarga repetido por cada MF) a cambio de la tranquilidad absoluta de que actualizar un componente compartido jamás va a romper en Producción un Microfrontend que no tenías intención de tocar.
+
 ### 3. Bajo Nivel: Organización del Código y Contratos Agnosticos
 
 A nivel de código, implementamos una separación estricta: **la UI jamás debe conocer la lógica de negocio ni el dominio de datos.**
