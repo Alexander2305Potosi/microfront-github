@@ -7,6 +7,12 @@ Este plan proporciona las instrucciones técnicas, configuraciones de código y 
 ## Solución 1: Escapar del Cuello de Botella del CI/CD (Librería Transversal)
 
 *   **Alto Nivel (Concepto Estratégico):** Evitaremos que el código compartido se copie 50 veces. Convertiremos la librería `core-shared` en un "Servicio Desacoplado". Si queremos cambiar el color de un botón global, lo actualizamos una sola vez y todos los MFs heredarán el cambio automáticamente sin tener que recompilarlos.
+
+*   **Aclaración sobre AWS S3 (¿Dónde vive `core-shared`?):**
+    `core-shared` **NO** necesita su propio bucket de S3. Sigue viviendo como una simple carpeta dentro de tu repositorio (monorepo). 
+    Cuando ejecutas el comando `ng build host`, Angular detecta que `core-shared` está en el bloque `shared`. En lugar de mezclarlo con el código principal, Angular genera un archivo físico separado (ej. `chunk-core-shared-123.js`) dentro de la carpeta `dist/host/`. 
+    Ese archivo se sube al **S3 del Host** junto con el resto del Host. Cuando los Microfrontends (desde sus propios S3) necesitan usar la tabla o la autenticación, van a través de la red y le piden ese chunk directamente al S3 del Host.
+
 *   **Medio Nivel (Arquitectura Angular):** Utilizaremos la propiedad `shared` de Native Federation. En lugar de inyectar el código estáticamente mediante el `tsconfig.json`, Angular empaquetará `core-shared` en un chunk independiente. El Host cargará este chunk en la memoria del navegador, y los MFs simplemente lo consumirán por referencia.
 
 ```mermaid
@@ -100,6 +106,12 @@ flowchart LR
 ## Solución 4: Resolución Dinámica de URLs (Adiós Localhost)
 
 *   **Alto Nivel (Concepto Estratégico):** Hacer que la aplicación sea inteligente para saber si el usuario la abrió localmente o en Producción, y cargar los Microfrontends correctos sin necesidad de tener múltiples compilaciones.
+
+*   **Aclaración sobre AWS S3 (¿Dónde vive `core-shared`?):**
+    `core-shared` **NO** necesita su propio bucket de S3. Sigue viviendo como una simple carpeta dentro de tu repositorio (monorepo). 
+    Cuando ejecutas el comando `ng build host`, Angular detecta que `core-shared` está en el bloque `shared`. En lugar de mezclarlo con el código principal, Angular genera un archivo físico separado (ej. `chunk-core-shared-123.js`) dentro de la carpeta `dist/host/`. 
+    Ese archivo se sube al **S3 del Host** junto con el resto del Host. Cuando los Microfrontends (desde sus propios S3) necesitan usar la tabla o la autenticación, van a través de la red y le piden ese chunk directamente al S3 del Host.
+
 *   **Medio Nivel (Arquitectura Angular):** Modificaremos el Bootstrap. Usaremos JavaScript para leer la URL del navegador (`window.location.hostname`) y decidir en tiempo real si descargamos el manifiesto de Localhost o el manifiesto de CloudFront.
 
 ```mermaid
