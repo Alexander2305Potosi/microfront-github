@@ -2,9 +2,12 @@
 
 Este proyecto está configurado como un **Monorepo (Workspace) de Angular**. Esto significa que desde esta carpeta raíz se administran múltiples aplicaciones.
 
-Actualmente, el ecosistema cuenta con dos aplicaciones:
+Actualmente, el ecosistema cuenta con un contenedor principal y múltiples microfrontends:
 1. **host** (Puerto 4200) - La aplicación base o contenedor principal.
-2. **remote** (Puerto 4201) - El microfrontend que expone componentes/funcionalidades.
+2. **mf-github-profiles** (Puerto 4201) - Microfrontend para perfiles de GitHub.
+3. **mf-users** (Puerto 4202) - Microfrontend para la gestión de usuarios.
+4. **mf-repos** (Puerto 4203) - Microfrontend para repositorios.
+5. **mf-complex** (Puerto 4204) - Microfrontend para escenarios complejos y pruebas avanzadas.
 
 Ambos proyectos utilizan **Angular Native Federation** y **Tailwind CSS v4**.
 
@@ -71,16 +74,16 @@ graph LR
     style C fill:#f9f,stroke:#333,stroke-width:2px
 ```
 
-- **Ubicación Física:** `projects/core-ui/`
-- **Configuración TS (El Contrato de Consumo):** El archivo `tsconfig.json` raíz crea el alias `"core-ui"` apuntando directamente a `projects/core-ui/src/public-api.ts`.
-- **Estrategia de compilación:** Cuando un MF (`remote` o `host`) requiere usar la tabla, importa este alias. Al construir el proyecto, el pipeline de compilación del MF en turno toma el código fuente de `core-ui` y **lo inyecta estáticamente en su propio bundle**.
+- **Ubicación Física:** `./core-ui/`
+- **Configuración TS (El Contrato de Consumo):** El archivo `tsconfig.json` raíz crea el alias `"core-ui"` apuntando directamente a `./core-ui/src/public-api.ts`.
+- **Estrategia de compilación:** Cuando un MF requiere usar la tabla, importa este alias. Al construir el proyecto, el pipeline de compilación del MF en turno toma el código fuente de `core-ui` y **lo inyecta estáticamente en su propio bundle**.
 ```json
 // tsconfig.json (Raíz)
 {
   "compilerOptions": {
     "paths": {
       "core-ui": [
-        "projects/core-ui/src/public-api.ts"
+        "./core-ui/src/public-api.ts"
       ]
     }
   }
@@ -92,9 +95,9 @@ graph LR
 A nivel de código, implementamos una separación estricta: **la UI jamás debe conocer la lógica de negocio ni el dominio de datos.**
 
 #### 3.1. Librería `core-ui` (Dumb Components)
-Ubicada en `projects/core-ui/src/lib/data-table/data-table.component.ts`. Es un componente standalone 100% agnóstico del dominio. Define contratos fuertes (interfaces) que dictan cómo los MFs deben interactuar con él:
+Ubicada en `core-ui/src/lib/data-table/data-table.component.ts`. Es un componente standalone 100% agnóstico del dominio. Define contratos fuertes (interfaces) que dictan cómo los MFs deben interactuar con él:
 ```typescript
-// Contrato base de la tabla (projects/core-ui/src/lib/...)
+// Contrato base de la tabla (core-ui/src/lib/...)
 export interface CoreTableColumn {
   key: string;
   label: string;
@@ -161,11 +164,12 @@ sequenceDiagram
 
 ## 🛠️ Notas importantes para el desarrollo
 
-- **Tailwind CSS:** Para usar clases de Tailwind, simplemente añádelas en el HTML de los componentes de cualquiera de los dos proyectos. La compilación se hará automáticamente.
+- **Tailwind CSS:** Para usar clases de Tailwind, simplemente añádelas en el HTML de los componentes de cualquiera de los proyectos. La compilación se hará automáticamente.
 - **Federation Config:** 
-  - Si deseas exponer un componente desde el `remote` hacia el exterior, debes declararlo en el archivo `remote/federation.config.js` dentro del bloque `exposes`.
-  - El `host` detectará automáticamente el código expuesto si configuras las rutas correctamente.
+  - Si deseas exponer un componente desde un microfrontend hacia el exterior, debes declararlo en su archivo `federation.config.js` (ej. `mf-users/federation.config.js`) dentro del bloque `exposes`.
+  - El `host` detectará automáticamente el código expuesto si configuras las rutas correctamente en `app.routes.ts`.
 - **Pruebas Unitarias:** Ejecuta `npm run test` para correr las pruebas locales de todo el ecosistema y librerías compartidas.
+- **Estándares de Código:** El proyecto utiliza Prettier (`.prettierrc`) y EditorConfig. Asegúrate de tener configurado tu editor para auto-formatear el código.
 
 ---
 
@@ -187,12 +191,14 @@ Para que otra IA o desarrollador pueda rastrear la implementación, este es el r
 #### A. Inicialización en el Contenedor Principal (`host/src/app/app.config.ts`)
 Angular (v15+) en modo Standalone requiere que el SDK de MSAL sea provisto como un Singleton durante el arranque. Se creó una fábrica (`MSALInstanceFactory`) que devuelve una instancia de `PublicClientApplication`.
 
+**⚠️ Acción Requerida para Desarrolladores:** Para probar el inicio de sesión localmente, debes dirigirte al archivo `host/src/app/app.config.ts` y reemplazar `'TU_CLIENT_ID_AQUI'` con un *Client ID* válido de Microsoft Entra ID.
+
 ```typescript
 // Proveedor en app.config.ts
 export function MSALInstanceFactory(): PublicClientApplication {
   return new PublicClientApplication({
     auth: {
-      clientId: 'TU_CLIENT_ID_AQUI', // Reemplazar con ID de App Registration en Azure
+      clientId: 'TU_CLIENT_ID_AQUI', // ¡Reemplazar con ID de App Registration en Azure!
       authority: 'https://login.microsoftonline.com/common', // O Tenant-ID específico
       redirectUri: 'http://localhost:4200'
     },
