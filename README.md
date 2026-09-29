@@ -340,4 +340,5 @@ Si necesitas utilizar un Agente de Inteligencia Artificial (como Antigravity, Gi
 > 2. Exportarlos en el `public-api.ts`.
 > 3. Refactorizar los MFs originales para que consuman el componente directamente desde `'core-shared'`.
 > 4. Eliminar el código duplicado y limpiar todas las importaciones o dependencias no utilizadas (Clean Code).
-> 5. Ejecutar y reparar las pruebas unitarias (`jest`), validar que la compilación (`esbuild`) funcione, y asegurar que la ejecución en tiempo de ejecución no tenga errores de dependencias cíclicas."
+> 5. Ejecutar y reparar las pruebas unitarias (`jest`), validar que la compilación (`esbuild`) funcione, y asegurar que la ejecución en tiempo de ejecución no tenga errores de dependencias cíclicas.
+> 6. Al documentar tu refactorización, explica claramente que si se modifica algún componente transversal en `core-shared`, basta con volver a desplegar el Host (quien contiene y distribuye el chunk actualizado) y el MF implicado. Esto simplifica enormemente el mantenimiento de versiones sin necesidad de recompilar todo el ecosistema."
