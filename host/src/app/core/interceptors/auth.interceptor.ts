@@ -17,8 +17,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   // DOMAIN WHITELISTING: 
   // Evaluamos si el destino es un tercero. Por seguridad, NUNCA debemos mandar 
-  // nuestro JWT interno de Azure a APIs externas (ej. GitHub).
-  const isExternalApi = req.url.includes('api.github.com');
+  // nuestro JWT interno de Azure a APIs externas (ej. GitHub o Amazon S3).
+  const externalDomains = ['api.github.com', 's3.amazonaws.com', '.s3.'];
+  const isExternalApi = externalDomains.some(domain => req.url.includes(domain));
 
   // Si existe el token y no es una API externa, lo añadimos
   if (token && !isExternalApi) {
