@@ -303,11 +303,9 @@ export function MSALInstanceFactory(): PublicClientApplication {
 Esta fábrica se inyecta en el bloque `providers` junto con el token `MSAL_INSTANCE` y el servicio inyectable `MsalService`.
 
 #### B. Flujo de Interacción UI (`host/src/app/login/login.component.ts`)
-La llamada a la autenticación se dispara aislando la vista principal. Al presionar el botón de "Directorio Activo de Azure", se invoca `this.msalService.loginPopup()`.
-- **Prevención XSS:** Al usar un Popup externo, se mitigan ataques XSS, pues el DOM del Host no tiene acceso a las credenciales digitadas.
-- **Suscripción Reactiva:** El componente se suscribe al Observable de MSAL. En caso de éxito (`next`), se guarda el `response.idToken` en el Storage y el `Router` enruta al `/dashboard`. (Nota: Actualmente, se provee un Fallback de demostración en el `error` dado que se requiere un `clientId` real para completar el flujo en Producción).
-
-
+La llamada a la autenticación se dispara aislando la vista principal. Al presionar el botón de "Directorio Activo de Azure", se invoca `this.msalService.loginRedirect()`.
+- **Regla de Negocio (Session Timeout):** Se optó por usar `loginRedirect()` de forma obligatoria en lugar de `loginPopup()`. Dado que el ecosistema requiere forzar un cierre y validación severa de sesión a los 20 minutos de inactividad, el redireccionamiento asegura que la página web recargue por completo desde cero sus variables de memoria cada vez que expira, evitando fugas de estado en memoria en los Single Page Applications.
+- **Captura Global de Token:** Tras redireccionar de vuelta desde los servidores de Microsoft, Angular reinicia su ciclo de vida y es el **`app.component.ts`** el encargado de suscribirse al `this.msalService.handleRedirectObservable()`, recuperar el JWT desde la barra de direcciones de forma segura y guardarlo en `SessionStorage` antes de enviarlo al Dashboard.
 #### C. Trazabilidad e Inyección (Aduana HTTP) (`host/src/app/core/interceptors/auth.interceptor.ts`)
 La aplicación anfitriona (*Host*) declara un interceptor funcional que afecta en cascada a todos los microfrontends bajo su contexto. Toda petición de red realizada por cualquier MF pasará por aquí.
 
