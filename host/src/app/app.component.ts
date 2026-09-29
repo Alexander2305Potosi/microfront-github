@@ -17,7 +17,7 @@ export class AppComponent implements OnInit {
       next: (response) => {
         if (response !== null && response.idToken) {
           console.log('Login por redirección exitoso:', response);
-          localStorage.setItem('msal_jwt_token', response.idToken);
+          sessionStorage.setItem('msal_jwt_token', response.idToken);
           this.router.navigate(['/dashboard']);
         } else {
           // MSAL también dispara este evento inicialmente con response = null

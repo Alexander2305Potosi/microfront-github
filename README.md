@@ -196,7 +196,7 @@ Si necesitas escalar el ecosistema y agregar un nuevo dominio (por ejemplo, `mf-
 2. **Exponer el componente:** En `mf-payments/federation.config.js`, expón tu componente principal (Smart Component):
    ```javascript
    exposes: {
-     './PaymentsRouter': './mf-payments/src/app/payments/payments.component.ts',
+     './PaymentsRouter': { file: './mf-payments/src/app/payments/payments.component.ts' },
    },
    ```
 3. **Registrarlo en el Host:**
@@ -274,6 +274,10 @@ El ecosistema delega la gestión de identidad corporativa a Microsoft Entra ID (
 - **Flujo Implementado:** OAuth 2.0 Authorization Code Flow con PKCE (Proof Key for Code Exchange). Se abandona el obsoleto *Implicit Flow* mitigando riesgos de intercepción de tokens en SPAs.
 - **Manejo de Sesión:** Configurado estrictamente en `BrowserCacheLocation.SessionStorage` para forzar la destrucción física de los tokens (incluyendo JWT y Cache) en la memoria local al momento de cerrar la pestaña del navegador, previniendo secuestro de sesión en equipos compartidos.
 
+
+### 3. Lógica Híbrida del Authentication Service
+Además de interpretar el JWT (Decodificación y Roles), el `AuthenticationService` (ubicado en `core-shared`) está diseñado para sincronizarse con un Backend propio. Expone métodos como `saveSessionToken()`, `validateSessionToken()`, y `closeSessionToken()` que se comunican con `http://localhost:3000/api` para mantener la integridad de la sesión en bases de datos internas, más allá de la autenticación de Azure.
+
 ### 2. Implementación Paso a Paso (Core Files)
 
 Para que otra IA o desarrollador pueda rastrear la implementación, este es el rastro arquitectónico:
@@ -303,9 +307,11 @@ La llamada a la autenticación se dispara aislando la vista principal. Al presio
 - **Prevención XSS:** Al usar un Popup externo, se mitigan ataques XSS, pues el DOM del Host no tiene acceso a las credenciales digitadas.
 - **Suscripción Reactiva:** El componente se suscribe al Observable de MSAL. En caso de éxito (`next`), se guarda el `response.idToken` en el Storage y el `Router` enruta al `/dashboard`. (Nota: Actualmente, se provee un Fallback de demostración en el `error` dado que se requiere un `clientId` real para completar el flujo en Producción).
 
+
 #### C. Trazabilidad e Inyección (Aduana HTTP) (`host/src/app/core/interceptors/auth.interceptor.ts`)
 La aplicación anfitriona (*Host*) declara un interceptor funcional que afecta en cascada a todos los microfrontends bajo su contexto. Toda petición de red realizada por cualquier MF pasará por aquí.
 
+**Whitelisting de Dominios (Seguridad):** El interceptor previene inyectar el token JWT de Microsoft en peticiones dirigidas a APIs de terceros utilizando el arreglo `externalDomains`. Por ejemplo, `api.github.com` y `s3.amazonaws.com` están excluidos para evitar errores de CORS y fugas de tokens corporativos. Si un nuevo MF necesita llamar a una API externa, ese dominio debe registrarse aquí.
 ```mermaid
 sequenceDiagram
     participant MFE as Microfrontend (Remote)

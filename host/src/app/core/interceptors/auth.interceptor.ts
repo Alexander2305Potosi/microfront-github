@@ -13,7 +13,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   let headers = req.headers.set('X-Request-ID', uuid);
 
   // Intentar obtener el token de Azure AD
-  const token = localStorage.getItem('msal_jwt_token');
+  const token = sessionStorage.getItem('msal_jwt_token');
 
   // DOMAIN WHITELISTING: 
   // Evaluamos si el destino es un tercero. Por seguridad, NUNCA debemos mandar 

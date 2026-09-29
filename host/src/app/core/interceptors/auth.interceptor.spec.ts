@@ -18,8 +18,8 @@ describe('authInterceptor', () => {
     httpMock = TestBed.inject(HttpTestingController);
     httpClient = TestBed.inject(HttpClient);
     
-    // Clear localStorage before each test
-    localStorage.clear();
+    // Clear sessionStorage before each test
+    sessionStorage.clear();
     
     // Spy on crypto.randomUUID (since it might not exist in jsdom)
     Object.defineProperty(globalThis, 'crypto', {
@@ -34,7 +34,7 @@ describe('authInterceptor', () => {
   });
 
   it('should add X-Request-ID and Authorization headers if token exists', () => {
-    localStorage.setItem('msal_jwt_token', 'fake-jwt-token');
+    sessionStorage.setItem('msal_jwt_token', 'fake-jwt-token');
 
     httpClient.get('/api/test').subscribe();
 

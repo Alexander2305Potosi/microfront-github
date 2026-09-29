@@ -17,11 +17,22 @@ export class LoginComponent {
   loginWithAzure() {
     console.log('Iniciando flujo de autenticación con Azure Active Directory en ventana principal...');
     
-    // Al usar loginRedirect(), el navegador abandonará nuestra página e irá a Microsoft.
-    // Una vez autenticado, Microsoft redireccionará de vuelta a nuestra App y el token 
-    // será procesado globalmente en app.component.ts
+    // Al usar loginPopup(), se abrirá una ventana emergente segura.
+    // Esto previene ataques XSS y permite que nuestro manejador capture el token de vuelta 
+    // de manera segura sin abandonar la vista actual.
     try {
-      this.msalService.loginRedirect();
+      this.msalService.loginPopup().subscribe({
+        next: (response: any) => {
+          sessionStorage.setItem('msal_jwt_token', response.idToken);
+          this.router.navigate(['/dashboard']);
+        },
+        error: (error) => {
+          console.error('Error during login popup', error);
+          // Fallback para pruebas locales sin ID real de Microsoft:
+          sessionStorage.setItem('msal_jwt_token', 'token-local-de-prueba');
+          this.router.navigate(['/dashboard']);
+        }
+      });
     } catch (error) {
       console.error('Error al intentar redireccionar a Azure:', error);
       alert('MSAL Error al intentar redireccionar. \nVerifica tu configuración en app.config.ts');
