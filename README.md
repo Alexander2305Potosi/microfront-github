@@ -320,3 +320,24 @@ sequenceDiagram
 - **Inyección de Trazabilidad:** Para facilitar la observabilidad en logs de Backend (Datadog, Grafana), el interceptor llama a la API nativa `crypto.randomUUID()` inyectando a cada petición HTTP la cabecera `X-Request-ID`. Así, se rastrea cada clic del usuario transversal a los microservicios.
 
 *(Si se requiere Bypass para otros proveedores, los desarrolladores deberán usar `HttpContext` de Angular en la petición de origen para evadir este interceptor).*
+
+
+## 🤖 Prompts de Refactorización para Agentes IA
+
+Si necesitas utilizar un Agente de Inteligencia Artificial (como Antigravity, GitHub Copilot o Cursor) para escalar este ecosistema o realizar refactorizaciones estructurales, puedes copiar y pegar los siguientes prompts. Están diseñados para darle el contexto arquitectónico exacto a la IA:
+
+### 1. Crear una nueva librería transversal (Estilo `core-shared`)
+> **Prompt:** "Actúa como un Arquitecto Angular experto en Native Federation. Necesito crear una nueva librería transversal en este monorepo (similar a `core-shared` pero llamada `core-design-system`). La librería no debe ser una aplicación ejecutable. Debes generar la estructura de carpetas, configurar el `public-api.ts`, declarar el alias en el `tsconfig.json` raíz y configurar el `federation.config.js` para que sea expuesta dinámicamente como *Shared Dependency* (con `singleton: true`). Valida que el proyecto compile correctamente sin dañar el ecosistema existente."
+
+### 2. Centralizar Servicios de Autenticación (`AuthService`)
+> **Prompt:** "Analiza todos los Microfrontends (`mf-*`) y el `host`. Si encuentras lógicas de autenticación, validación de JWT o manejo de sesión (sessionStorage) duplicadas en los MFs, debes centralizar todo ese código en el proyecto `core-shared` (dentro de la carpeta `/auth`). Luego, refactoriza cada microfrontend para eliminar su código de autenticación local e inyectar el servicio centralizado importándolo desde el alias `'core-shared'`. Asegúrate de que los MFs consuman la versión singleton proveída por la Federación y valida que no se rompan las pruebas unitarias."
+
+### 3. Extraer Componentes Comunes y Limpiar Deuda Técnica
+> **Prompt:** "Haz un análisis profundo de los Microfrontends (ej. `mf-users`, `mf-repos`, `mf-complex`). Identifica componentes visuales (Dumb Components) que estén duplicados o que sean lo suficientemente genéricos para ser reutilizados (como botones, modales, alertas o tablas). 
+> 
+> Tu tarea es:
+> 1. Mover estos componentes genéricos a `core-shared/src/lib/ui/`.
+> 2. Exportarlos en el `public-api.ts`.
+> 3. Refactorizar los MFs originales para que consuman el componente directamente desde `'core-shared'`.
+> 4. Eliminar el código duplicado y limpiar todas las importaciones o dependencias no utilizadas (Clean Code).
+> 5. Ejecutar y reparar las pruebas unitarias (`jest`), validar que la compilación (`esbuild`) funcione, y asegurar que la ejecución en tiempo de ejecución no tenga errores de dependencias cíclicas."
