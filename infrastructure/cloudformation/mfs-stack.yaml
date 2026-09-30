@@ -27,9 +27,7 @@ Parameters:
     Description: "(Optional) Route53 Hosted Zone ID for domain registration"
 
 Conditions:
-  HasCustomDomain: !And
-    - !Not [!Equals [!Ref DomainName, ""]]
-    - !Not [!Equals [!Ref HostedZoneId, ""]]
+  HasCustomDomain: !Not [!Equals [!Ref DomainName, ""]]
 
 Resources:
 
@@ -323,14 +321,20 @@ Resources:
             Resource: !Sub "${MfComplexBucket.Arn}/*"
 
   # =========================================================================
-  # 5. ROUTE 53 DNS ALIAS RECORDS
+  # 5. ROUTE 53 HOSTED ZONE & DNS ALIAS RECORDS
   # =========================================================================
+
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Condition: HasCustomDomain
+    Properties:
+      Name: !Ref DomainName
 
   Route53RecordA:
     Type: AWS::Route53::RecordSet
     Condition: HasCustomDomain
     Properties:
-      HostedZoneId: !Ref HostedZoneId
+      HostedZoneId: !Ref HostedZone
       Name: !Ref DomainName
       Type: A
       AliasTarget:
@@ -342,7 +346,7 @@ Resources:
     Type: AWS::Route53::RecordSet
     Condition: HasCustomDomain
     Properties:
-      HostedZoneId: !Ref HostedZoneId
+      HostedZoneId: !Ref HostedZone
       Name: !Ref DomainName
       Type: AAAA
       AliasTarget:

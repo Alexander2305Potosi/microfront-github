@@ -6,7 +6,7 @@ module.exports = {
     "./mf-users/src/**/*.{html,ts}",
     "./mf-repos/src/**/*.{html,ts}",
     "./mf-complex/src/**/*.{html,ts}",
-    "./core-ui/src/**/*.{html,ts}"
+    "./core-shared/src/**/*.{html,ts}"
   ],
   theme: {
     extend: {

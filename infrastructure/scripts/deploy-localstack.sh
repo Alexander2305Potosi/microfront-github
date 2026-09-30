@@ -5,12 +5,14 @@ ENDPOINT_URL="http://localhost:4566"
 STACK_NAME="mfs-infrastructure"
 ENVIRONMENT="dev"
 PROJECT_PREFIX="mfs-app"
+DOMAIN_NAME="mfs-app.local"
 
 echo "🚀 [1/4] Desplegando plantilla de CloudFormation en LocalStack..."
 aws --endpoint-url=${ENDPOINT_URL} cloudformation deploy \
   --stack-name ${STACK_NAME} \
   --template-file infrastructure/cloudformation/mfs-stack.yaml \
-  --parameter-overrides Environment=${ENVIRONMENT} ProjectPrefix=${PROJECT_PREFIX} \
+  --parameter-overrides Environment=${ENVIRONMENT} ProjectPrefix=${PROJECT_PREFIX} DomainName=${DOMAIN_NAME} \
+  --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
   --no-fail-on-empty-changeset
 
 echo "📦 [2/4] Listando buckets S3 creados en LocalStack:"
