@@ -1,3 +1,5 @@
+(globalThis as any).ngDevMode = (globalThis as any).ngDevMode ?? false;
+
 import { initFederation } from '@angular-architects/native-federation';
 
 initFederation()

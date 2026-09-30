@@ -1,0 +1,388 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for Microfrontends infrastructure (Host + MFs S3 Buckets & CloudFront Distribution)'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment stage (dev, staging, prod)
+
+  ProjectPrefix:
+    Type: String
+    Default: mfs-app
+    Description: Prefix used for naming AWS resources
+
+  DomainName:
+    Type: String
+    Default: ""
+    Description: "(Optional) Custom domain name for Route53 DNS (e.g. app.mycompany.com)"
+
+  HostedZoneId:
+    Type: String
+    Default: ""
+    Description: "(Optional) Route53 Hosted Zone ID for domain registration"
+
+Conditions:
+  HasCustomDomain: !And
+    - !Not [!Equals [!Ref DomainName, ""]]
+    - !Not [!Equals [!Ref HostedZoneId, ""]]
+
+Resources:
+
+  # =========================================================================
+  # 1. S3 BUCKETS FOR HOST AND MICROFRONTENDS
+  # =========================================================================
+
+  # S3 Bucket: Host Application
+  HostBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectPrefix}-${Environment}-host"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'HEAD']
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # S3 Bucket: mf-github-profiles
+  MfGithubProfilesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectPrefix}-${Environment}-mf-github-profiles"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'HEAD']
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # S3 Bucket: mf-users
+  MfUsersBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectPrefix}-${Environment}-mf-users"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'HEAD']
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # S3 Bucket: mf-repos
+  MfReposBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectPrefix}-${Environment}-mf-repos"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'HEAD']
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # S3 Bucket: mf-complex
+  MfComplexBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectPrefix}-${Environment}-mf-complex"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'HEAD']
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # =========================================================================
+  # 2. CLOUDFRONT ORIGIN ACCESS CONTROL (OAC) & IDENTITY (OAI)
+  # =========================================================================
+
+  CloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${ProjectPrefix}-${Environment}-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub "OAI for ${ProjectPrefix}-${Environment} S3 Buckets"
+
+  # =========================================================================
+  # 3. CLOUDFRONT DISTRIBUTION
+  # =========================================================================
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub "Distribution for ${ProjectPrefix}-${Environment} Microfrontends"
+        DefaultRootObject: index.html
+
+        # Custom error pages for SPA routing (Angular Host)
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 10
+
+        Origins:
+          # Host Origin
+          - Id: HostOrigin
+            DomainName: !GetAtt HostBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+
+          # mf-github-profiles Origin
+          - Id: MfGithubProfilesOrigin
+            DomainName: !GetAtt MfGithubProfilesBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+
+          # mf-users Origin
+          - Id: MfUsersOrigin
+            DomainName: !GetAtt MfUsersBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+
+          # mf-repos Origin
+          - Id: MfReposOrigin
+            DomainName: !GetAtt MfReposBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+
+          # mf-complex Origin
+          - Id: MfComplexOrigin
+            DomainName: !GetAtt MfComplexBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+
+        # Default Behavior -> Host App
+        DefaultCacheBehavior:
+          TargetOriginId: HostOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
+          CachedMethods: ['GET', 'HEAD']
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+
+        # Cache Behaviors per Microfrontend
+        CacheBehaviors:
+          - PathPattern: "mf-github-profiles/*"
+            TargetOriginId: MfGithubProfilesOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
+            CachedMethods: ['GET', 'HEAD']
+            Compress: true
+            ForwardedValues:
+              QueryString: true
+              Cookies:
+                Forward: none
+
+          - PathPattern: "mf-users/*"
+            TargetOriginId: MfUsersOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
+            CachedMethods: ['GET', 'HEAD']
+            Compress: true
+            ForwardedValues:
+              QueryString: true
+              Cookies:
+                Forward: none
+
+          - PathPattern: "mf-repos/*"
+            TargetOriginId: MfReposOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
+            CachedMethods: ['GET', 'HEAD']
+            Compress: true
+            ForwardedValues:
+              QueryString: true
+              Cookies:
+                Forward: none
+
+          - PathPattern: "mf-complex/*"
+            TargetOriginId: MfComplexOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
+            CachedMethods: ['GET', 'HEAD']
+            Compress: true
+            ForwardedValues:
+              QueryString: true
+              Cookies:
+                Forward: none
+
+  # =========================================================================
+  # 4. S3 BUCKET POLICIES (ALLOW CLOUDFRONT READ ACCESS)
+  # =========================================================================
+
+  HostBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref HostBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub "${HostBucket.Arn}/*"
+
+  MfGithubProfilesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MfGithubProfilesBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub "${MfGithubProfilesBucket.Arn}/*"
+
+  MfUsersBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MfUsersBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub "${MfUsersBucket.Arn}/*"
+
+  MfReposBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MfReposBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub "${MfReposBucket.Arn}/*"
+
+  MfComplexBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref MfComplexBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub "${MfComplexBucket.Arn}/*"
+
+  # =========================================================================
+  # 5. ROUTE 53 DNS ALIAS RECORDS
+  # =========================================================================
+
+  Route53RecordA:
+    Type: AWS::Route53::RecordSet
+    Condition: HasCustomDomain
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        HostedZoneId: Z2FDTNDATAQYW2 # Global CloudFront Hosted Zone ID
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
+        EvaluateTargetHealth: false
+
+  Route53RecordAAAA:
+    Type: AWS::Route53::RecordSet
+    Condition: HasCustomDomain
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: AAAA
+      AliasTarget:
+        HostedZoneId: Z2FDTNDATAQYW2 # Global CloudFront Hosted Zone ID
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
+        EvaluateTargetHealth: false
+
+# =========================================================================
+# OUTPUTS
+# =========================================================================
+Outputs:
+  CloudFrontDistributionId:
+    Description: 'ID of the CloudFront distribution'
+    Value: !Ref CloudFrontDistribution
+
+  CloudFrontDomainName:
+    Description: 'Domain name of the CloudFront distribution'
+    Value: !GetAtt CloudFrontDistribution.DomainName
+
+  CustomDomainUrl:
+    Description: 'Custom Domain URL (Route53)'
+    Value: !Sub "https://${DomainName}"
+    Condition: HasCustomDomain
+
+  HostBucketName:
+    Description: 'Name of Host S3 Bucket'
+    Value: !Ref HostBucket
+
+  MfGithubProfilesBucketName:
+    Description: 'Name of mf-github-profiles S3 Bucket'
+    Value: !Ref MfGithubProfilesBucket
+
+  MfUsersBucketName:
+    Description: 'Name of mf-users S3 Bucket'
+    Value: !Ref MfUsersBucket
+
+  MfReposBucketName:
+    Description: 'Name of mf-repos S3 Bucket'
+    Value: !Ref MfReposBucket
+
+  MfComplexBucketName:
+    Description: 'Name of mf-complex S3 Bucket'
+    Value: !Ref MfComplexBucket

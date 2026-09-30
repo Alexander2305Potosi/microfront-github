@@ -9,7 +9,9 @@
     "watch": "ng build --watch --configuration development",
     "test": "jest",
     "test:watch": "jest --watch",
-    "serve:ssr:host": "node dist/host/server/server.mjs"
+    "serve:ssr:host": "node dist/host/server/server.mjs",
+    "infrastructure:localstack": "./infrastructure/scripts/deploy-localstack.sh",
+    "infrastructure:aws": "./infrastructure/scripts/deploy-aws.sh"
   },
   "private": true,
   "dependencies": {

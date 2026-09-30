@@ -1,0 +1,6 @@
+{
+  "mf-github-profiles": "http://localhost:4566/mfs-app-dev-mf-github-profiles/remoteEntry.json",
+  "mf-users": "http://localhost:4566/mfs-app-dev-mf-users/remoteEntry.json",
+  "mf-repos": "http://localhost:4566/mfs-app-dev-mf-repos/remoteEntry.json",
+  "mf-complex": "http://localhost:4566/mfs-app-dev-mf-complex/remoteEntry.json"
+}

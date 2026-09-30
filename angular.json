@@ -60,6 +60,7 @@
         "esbuild": {
           "builder": "@angular/build:application",
           "options": {
+            "index": "host/src/index.html",
             "browser": "host/src/main.ts",
             "tsConfig": "host/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
