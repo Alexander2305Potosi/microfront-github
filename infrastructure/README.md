@@ -21,16 +21,16 @@ Para desplegar esta solución de forma escalable, segura y económica:
 
 ```mermaid
 flowchart TD
-    Client([💻 Cliente / Navegador Web]) -->|1. Consulta DNS: mi-empresa-mfs.com| R53[🌐 AWS Route 53]
-    R53 -->|2. Resuelve Alias A/AAAA| CF[⚡ AWS CloudFront CDN Distribution]
+    Client(["💻 Cliente / Navegador Web"]) -->|"1. Consulta DNS: mi-empresa-mfs.com"| R53["🌐 AWS Route 53"]
+    R53 -->|"2. Resuelve Alias A/AAAA"| CF["⚡ AWS CloudFront CDN Distribution"]
     
-    subgraph AWS Cloud / MiniStack Environment
+    subgraph "AWS Cloud / MiniStack Environment"
         direction TB
-        CF -->|/ (Default)| S3Host[(🪣 S3: mfs-app-dev-host)]
-        CF -->|/mf-github-profiles/*| S3Github[(🪣 S3: mfs-app-dev-mf-github-profiles)]
-        CF -->|/mf-users/*| S3Users[(🪣 S3: mfs-app-dev-mf-users)]
-        CF -->|/mf-repos/*| S3Repos[(🪣 S3: mfs-app-dev-mf-repos)]
-        CF -->|/mf-complex/*| S3Complex[(🪣 S3: mfs-app-dev-mf-complex)]
+        CF -->|"/ (Default)"| S3Host[("🪣 S3: mfs-app-dev-host")]
+        CF -->|"/mf-github-profiles/*"| S3Github[("🪣 S3: mfs-app-dev-mf-github-profiles")]
+        CF -->|"/mf-users/*"| S3Users[("🪣 S3: mfs-app-dev-mf-users")]
+        CF -->|"/mf-repos/*"| S3Repos[("🪣 S3: mfs-app-dev-mf-repos")]
+        CF -->|"/mf-complex/*"| S3Complex[("🪣 S3: mfs-app-dev-mf-complex")]
     end
 
     style R53 fill:#8c4fff,stroke:#232f3e,stroke-width:2px,color:#fff
