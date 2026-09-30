@@ -7,7 +7,7 @@ ENVIRONMENT="dev"
 PROJECT_PREFIX="mfs-app"
 DOMAIN_NAME="mfs-app.local"
 
-echo "🚀 [1/4] Desplegando plantilla de CloudFormation en LocalStack..."
+echo "🚀 [1/4] Desplegando plantilla de CloudFormation en MiniStack..."
 aws --endpoint-url=${ENDPOINT_URL} cloudformation deploy \
   --stack-name ${STACK_NAME} \
   --template-file infrastructure/cloudformation/mfs-stack.yaml \
@@ -15,7 +15,7 @@ aws --endpoint-url=${ENDPOINT_URL} cloudformation deploy \
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
   --no-fail-on-empty-changeset
 
-echo "📦 [2/4] Listando buckets S3 creados en LocalStack:"
+echo "📦 [2/4] Listando buckets S3 creados en MiniStack:"
 aws --endpoint-url=${ENDPOINT_URL} s3 ls
 
 echo "🔨 [3/4] Sincronizando Microfrontends a los Buckets de S3..."
@@ -50,4 +50,4 @@ for item in "${MFS[@]}"; do
   fi
 done
 
-echo "✅ [4/4] ¡Despliegue en LocalStack finalizado con éxito!"
+echo "✅ [4/4] ¡Despliegue en MiniStack finalizado con éxito!"

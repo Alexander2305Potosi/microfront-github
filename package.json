@@ -10,7 +10,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "serve:ssr:host": "node dist/host/server/server.mjs",
-    "infrastructure:localstack": "./infrastructure/scripts/deploy-localstack.sh",
+    "infrastructure:ministack": "./infrastructure/scripts/deploy-ministack.sh",
     "infrastructure:aws": "./infrastructure/scripts/deploy-aws.sh"
   },
   "private": true,

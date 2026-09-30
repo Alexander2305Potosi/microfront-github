@@ -7,8 +7,8 @@ const port = window.location.port;
 
 let manifestPath = 'federation.manifest.json';
 
-if (port === '4566' || host.includes('localstack')) {
-  manifestPath = 'federation.manifest.localstack.json';
+if (port === '4566' || host.includes('ministack') || host.includes('localstack')) {
+  manifestPath = 'federation.manifest.ministack.json';
 } else if (host !== 'localhost' && host !== '127.0.0.1') {
   manifestPath = 'federation.manifest.prod.json';
 }

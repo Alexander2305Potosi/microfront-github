@@ -1,4 +1,4 @@
-# 📘 Manual de Infraestructura e IaC (CloudFormation, Route53, CloudFront & LocalStack)
+# 📘 Manual de Infraestructura e IaC (CloudFormation, Route53, CloudFront & MiniStack)
 
 Este manual documenta la arquitectura de infraestructura como código (IaC), las plantillas de AWS CloudFormation y los scripts de automatización para el despliegue del ecosistema de Microfrontends (`host`, `mf-github-profiles`, `mf-users`, `mf-repos` y `mf-complex`).
 
@@ -13,7 +13,7 @@ Para desplegar esta solución de forma escalable, segura y económica:
 1. **Resolución DNS Personalizada (AWS Route 53):** Route 53 resuelve el nombre de dominio corporativo (ej. `https://mi-empresa-mfs.com`) mediante registros Alias A y AAAA sin latencia adicional.
 2. **Punto Único de Entrada y Seguridad (AWS CloudFront CDN):** Una sola distribución de CloudFront actúa como fachada/proxy unificado con certificado SSL/TLS (HTTPS). Para el navegador, la app parece un único sitio web en un solo dominio, eliminando problemas de puertos múltiples o peticiones inter-origen complejas.
 3. **Desacoplamiento Total en Almacenamiento (AWS S3):** Cada microfrontend vive en su propio almacenamiento independiente (Bucket S3). Esto permite a diferentes equipos desplegar `mf-users` o `mf-repos` sin tocar ni poner en riesgo el `host`.
-4. **Entorno Simulado Local (LocalStack):** Permite a los desarrolladores probar el 100% de la infraestructura de AWS (CloudFormation, S3, CloudFront, Route53) en sus máquinas locales de manera totalmente gratuita.
+4. **Entorno Simulado Local (MiniStack):** Permite a los desarrolladores probar el 100% de la infraestructura de AWS (CloudFormation, S3, CloudFront, Route53) en sus máquinas locales de manera totalmente gratuita.
 
 ---
 
@@ -24,7 +24,7 @@ flowchart TD
     Client([💻 Cliente / Navegador Web]) -->|1. Consulta DNS: mi-empresa-mfs.com| R53[🌐 AWS Route 53]
     R53 -->|2. Resuelve Alias A/AAAA| CF[⚡ AWS CloudFront CDN Distribution]
     
-    subgraph AWS Cloud / LocalStack Environment
+    subgraph AWS Cloud / MiniStack Environment
         direction TB
         CF -->|/ (Default)| S3Host[(🪣 S3: mfs-app-dev-host)]
         CF -->|/mf-github-profiles/*| S3Github[(🪣 S3: mfs-app-dev-mf-github-profiles)]
@@ -140,7 +140,7 @@ infrastructure/
 ├── cloudformation/
 │   └── mfs-stack.yaml          # Plantilla oficial de CloudFormation (S3, CloudFront, Route53)
 ├── scripts/
-│   ├── deploy-localstack.sh    # Script de despliegue para LocalStack
+│   ├── deploy-ministack.sh     # Script de despliegue para MiniStack
 │   └── deploy-aws.sh           # Script de despliegue para AWS Producción
 └── README.md                   # Este manual técnico
 ```
@@ -149,9 +149,9 @@ infrastructure/
 
 ### Guía de Uso Paso a Paso
 
-#### A. Entorno Local (LocalStack)
+#### A. Entorno Local (MiniStack)
 
-##### 1. Verificar que LocalStack esté ejecutándose
+##### 1. Verificar que MiniStack esté ejecutándose
 ```bash
 aws --endpoint-url=http://localhost:4566 s3 ls
 ```
@@ -161,12 +161,12 @@ aws --endpoint-url=http://localhost:4566 s3 ls
 npm run build
 ```
 
-##### 3. Ejecutar el Despliegue Automático en LocalStack
+##### 3. Ejecutar el Despliegue Automático en MiniStack
 ```bash
-npm run infrastructure:localstack
+npm run infrastructure:ministack
 ```
 
-##### 4. Comandos de Inspección en LocalStack (Manual CLI)
+##### 4. Comandos de Inspección en MiniStack (Manual CLI)
 
 - **Validar la plantilla de CloudFormation:**
   ```bash
@@ -245,7 +245,7 @@ aws cloudformation deploy \
 
 > [!TIP]
 > **Error de CORS en la consola del navegador (`Access-Control-Allow-Origin` missing):**
-> Verifique que los buckets S3 mantengan la propiedad `CorsConfiguration` en la plantilla de CloudFormation. Si realiza cambios directos en S3, vuelva a aplicar el stack con `npm run infrastructure:localstack` o `npm run infrastructure:aws`.
+> Verifique que los buckets S3 mantengan la propiedad `CorsConfiguration` en la plantilla de CloudFormation. Si realiza cambios directos en S3, vuelva a aplicar el stack con `npm run infrastructure:ministack` o `npm run infrastructure:aws`.
 
 > [!TIP]
 > **Microfrontend muestra versión antigua tras redesplegar:**
