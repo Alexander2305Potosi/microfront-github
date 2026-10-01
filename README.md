@@ -334,3 +334,39 @@ Si necesitas utilizar un Agente de Inteligencia Artificial (Antigravity, Copilot
 
 ### 3. Extraer Componentes Comunes y Limpiar Deuda Técnica
 > **Prompt:** "Analiza los MFs (ej. `mf-users`, `mf-repos`). Identifica Dumb Components genéricos duplicados (botones, modales, tablas). Mueve estos componentes a `core-shared/src/lib/ui/`, expórtalos en `public-api.ts` y refactoriza los MFs para consumirlos desde `'core-shared'`. Elimina el código duplicado y las dependencias sin uso. **Contexto de Negocio:** Todo componente extraído debe distribuirse dinámicamente. Esto garantiza que un rediseño UI futuro (ej. cambiar un color primario) solo requiera redesplegar el Host y el MF directamente afectado, facilitando el control de versiones independientes en AWS S3. Repara `jest`, valida `esbuild` y asegura ausencia de dependencias cíclicas."
+
+---
+
+## 📐 Caso de Estudio Arquitectónico: Desacoplamiento de Buckets S3 y Acceso a Microfrontends
+
+### Problema: Migración de S3 Monolítico a S3 Independientes por Microfrontend
+Al separar los microfrontends de un solo bucket S3 monolítico (donde todo vivía bajo subcarpetas `/mf-*`) a **buckets S3 desacoplados e independientes por MF (ej. `S3.1` para Host y `S3.2` para `mf-*`)**, se pueden presentar dos problemas si no se configura la infraestructura adecuadamente:
+1. **Error HTTP 403 (Forbidden / Access Denied):** Al intentar consumir directamente las URLs de S3.2 (`https://s3.2.amazonaws.com/...`), S3 rechaza las peticiones por tener bloqueado el acceso público (`Block Public Access = true`).
+2. **URLs Temporales / Expirables o Bloqueos CORS:** Al no usar una CDN unificada, el llamado directo entre dominios o mediante URLs presignadas rompe la carga estática de `remoteEntry.json`.
+
+```mermaid
+flowchart TD
+    Browser["💻 Navegador / Host (en S3.1)"] -->|"1. GET / (Host App)"| CF["⚡ AWS CloudFront CDN"]
+    Browser -->|"2. GET /mf-modulo/remoteEntry.json"| CF
+    
+    subgraph "AWS Cloud Infrastructure"
+        direction TB
+        CF -->|"Path Pattern / (Default)"| S3_1[("🪣 S3.1: Host App")]
+        CF -->|"Path Pattern /mf-modulo/*"| S3_2[("🪣 S3.2: Nuevo Microfrontend")]
+    end
+```
+
+### Solución Arquitectónica Recomendada (3 Pasos)
+
+1. **Fachada Unificada en CloudFront (Origen y Cache Behavior):**
+   - En la distribución de CloudFront, se añade `S3.2` como un **Origin** independiente.
+   - Se crea un **Cache Behavior** para la ruta `mf-modulo/*` dirigida al origen `S3.2`.
+   - *Resultado:* El navegador solicita `https://mi-dominio.com/mf-modulo/remoteEntry.json`. Para la aplicación y el navegador, la petición es hacia el **mismo origen**, eliminando errores 403 y previniendo bloqueos de CORS.
+
+2. **Permisos de Lectura mediante OAC (Origin Access Control):**
+   - El bucket `S3.2` se mantiene 100% privado sin acceso público directo.
+   - En la **S3 Bucket Policy** de `S3.2`, se concede acceso `s3:GetObject` exclusivamente al Service Principal de CloudFront filtrado por la condición `AWS:SourceArn`.
+
+3. **Configuración CORS en S3 (En caso de dominios CDN independientes):**
+   - Si por razones de negocio `S3.2` se sirve a través de otro dominio o CDN separado, se deben configurar las reglas CORS (`AllowedOrigins`, `AllowedHeaders`, `AllowedMethods`) en `S3.2` permitiendo el dominio del Host.
+
