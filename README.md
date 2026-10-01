@@ -416,7 +416,7 @@ flowchart TD
 
 ---
 
-### 🔴 3. Bajo Nivel (Configuraciones Exactas y Código)
+### 🔴 3. Bajo Nivel (Configuración Exclusiva de Infraestructura e IaC)
 
 #### A. Configuración YAML en CloudFormation para el Patrón B (Comodín `mf-*/*`):
 
@@ -459,25 +459,22 @@ Resources:
               QueryString: true
               Cookies:
                 Forward: none
+
+  # 4. Política de Acceso OAC para el Bucket de Remotos (Seguridad 100% Privada)
+  RemotesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref RemotesBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: 's3:GetObject'
+            Resource: !Sub "${RemotesBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 ```
-
-#### B. Registro en la Aplicación (Angular / Native Federation):
-
-Para consumir el nuevo MF `mf-payments`, solo se requieren 2 pasos en la aplicación Angular:
-
-1. **Registrar la URL en el Manifiesto (`host/public/federation.manifest.prod.json`):**
-   ```json
-   {
-     "mf-payments": "https://mi-dominio.com/mf-payments/remoteEntry.json"
-   }
-   ```
-2. **Cargar la Ruta Pérez en el Host (`host/src/app/app.routes.ts`):**
-   ```typescript
-   {
-     path: 'payments',
-     loadComponent: () => loadRemoteModule('mf-payments', './PaymentsRouter')
-       .then(m => m.PaymentsComponent)
-   }
-   ```
 
 
