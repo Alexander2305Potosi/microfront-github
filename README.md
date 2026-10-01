@@ -418,63 +418,68 @@ flowchart TD
 
 ### 🔴 3. Bajo Nivel (Configuración Exclusiva de Infraestructura e IaC)
 
-#### A. Configuración YAML en CloudFormation para el Patrón B (Comodín `mf-*/*`):
+Para implementar el **Patrón B (Comodín `mf-*/*`)**, las modificaciones se aplican directamente en el archivo de plantilla de CloudFormation [`infrastructure/cloudformation/mfs-stack.yaml`](file:///Volumes/Macintosh%20HD%20-%20Data/microfrontend/infrastructure/cloudformation/mfs-stack.yaml) en las siguientes ubicaciones exactas:
 
+#### 1. Ubicación: Sección `Resources:` (Creación del Bucket de Remotos)
+Reemplazar los N buckets remotos individuales por un solo bucket `RemotesBucket`:
 ```yaml
-Resources:
-  # 1. Bucket Único para Todos los Remotos
-  RemotesBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "${ProjectPrefix}-${Environment}-remotes"
-      CorsConfiguration:
-        CorsRules:
-          - AllowedHeaders: ['*']
-            AllowedMethods: ['GET', 'HEAD']
-            AllowedOrigins: ['*']
-            MaxAge: 3600
+RemotesBucket:
+  Type: AWS::S3::Bucket
+  Properties:
+    BucketName: !Sub "${ProjectPrefix}-${Environment}-remotes"
+    CorsConfiguration:
+      CorsRules:
+        - AllowedHeaders: ['*']
+          AllowedMethods: ['GET', 'HEAD']
+          AllowedOrigins: ['*']
+          MaxAge: 3600
+```
 
-  # 2. Origen Único en CloudFront
-  CloudFrontDistribution:
-    Type: AWS::CloudFront::Distribution
-    Properties:
-      DistributionConfig:
-        Origins:
-          - Id: HostOrigin
-            DomainName: !GetAtt HostBucket.RegionalDomainName
-            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
-          - Id: RemotesOrigin
-            DomainName: !GetAtt RemotesBucket.RegionalDomainName
-            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+#### 2. Ubicación: Dentro de `CloudFrontDistribution.Properties.DistributionConfig.Origins`
+Agregar la referencia del origen hacia el bucket de remotos:
+```yaml
+Origins:
+  - Id: HostOrigin
+    DomainName: !GetAtt HostBucket.RegionalDomainName
+    OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+  - Id: RemotesOrigin
+    DomainName: !GetAtt RemotesBucket.RegionalDomainName
+    OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+```
 
-        # 3. ÚNICA REGLA DE CACHÉ CON COMODÍN (Abarca infinitos MFs futuros)
-        CacheBehaviors:
-          - PathPattern: "mf-*/*"
-            TargetOriginId: RemotesOrigin
-            ViewerProtocolPolicy: redirect-to-https
-            AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
-            CachedMethods: ['GET', 'HEAD']
-            Compress: true
-            ForwardedValues:
-              QueryString: true
-              Cookies:
-                Forward: none
+#### 3. Ubicación: Dentro de `CloudFrontDistribution.Properties.DistributionConfig.CacheBehaviors`
+Reemplazar todas las reglas individuales por la **única regla comodín**:
+```yaml
+CacheBehaviors:
+  - PathPattern: "mf-*/*"  # <-- Regla comodín que sirve a cualquier microfrontend futuro
+    TargetOriginId: RemotesOrigin
+    ViewerProtocolPolicy: redirect-to-https
+    AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
+    CachedMethods: ['GET', 'HEAD']
+    Compress: true
+    ForwardedValues:
+      QueryString: true
+      Cookies:
+        Forward: none
+```
 
-  # 4. Política de Acceso OAC para el Bucket de Remotos (Seguridad 100% Privada)
-  RemotesBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref RemotesBucket
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: cloudfront.amazonaws.com
-            Action: 's3:GetObject'
-            Resource: !Sub "${RemotesBucket.Arn}/*"
-            Condition:
-              StringEquals:
-                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+#### 4. Ubicación: Sección `Resources:` (Política de Seguridad Bucket Policy)
+Agregar la política de acceso firmada por OAC para el bucket de remotos:
+```yaml
+RemotesBucketPolicy:
+  Type: AWS::S3::BucketPolicy
+  Properties:
+    Bucket: !Ref RemotesBucket
+    PolicyDocument:
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service: cloudfront.amazonaws.com
+          Action: 's3:GetObject'
+          Resource: !Sub "${RemotesBucket.Arn}/*"
+          Condition:
+            StringEquals:
+              AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 ```
 
 
