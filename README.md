@@ -374,23 +374,16 @@ flowchart TD
 
 ## 🚀 Estrategias de Escalabilidad de Infraestructura (IaC) para N Microfrontends
 
-*(Nota: Esta estrategia de comodines y patrones de almacenamiento aplica exclusivamente a la capa de Infraestructura e IaC en CloudFront y S3. En la capa de aplicación Angular / Native Federation, cada microfrontend sigue exponiendo sus componentes e integrando sus rutas independientemente).*
+*(Nota: Esta guía de aprovisionamiento aplica exclusivamente a la capa de Infraestructura e IaC en CloudFront y S3).*
 
-Cuando el ecosistema crece de 5 a **decenas de Microfrontends** (`mf-payments`, `mf-billing`, `mf-reports`), existen dos patrones de arquitectura para escalar el aprovisionamiento de infraestructura:
+Cuando el ecosistema crece de 5 a **decenas de Microfrontends** (`mf-payments`, `mf-billing`, `mf-reports`), se aplica el **Patrón A (Bucket Físico por MF - Aislamiento Total)**.
 
 ```mermaid
 flowchart TD
     subgraph "Patrón A: Buckets Físicos Aislados por MF (Aislamiento Total)"
-        CF_A["⚡ CloudFront CDN"] -->|"/mf-users/*"| S3_Users[("🪣 S3: mf-users")]
-        CF_A -->|"/mf-payments/*"| S3_Pay[("🪣 S3: mf-payments")]
-        CF_A -->|"/mf-billing/*"| S3_Bill[("🪣 S3: mf-billing")]
-    end
-
-    subgraph "Patrón B: Bucket Único de Remotos con Comodín (Cero-Mantenimiento IaC)"
-        CF_B["⚡ CloudFront CDN"] -->|"PathPattern: mf-*/* (Comodín)"| S3_Remotes[("🪣 S3 Único: mfs-app-dev-remotes")]
-        S3_Remotes --> Folder1["📁 /mf-users/"]
-        S3_Remotes --> Folder2["📁 /mf-payments/"]
-        S3_Remotes --> Folder3["📁 /mf-billing/"]
+        CF["⚡ AWS CloudFront CDN"] -->|"/mf-users/*"| S3_Users[("🪣 S3: mf-users")]
+        CF -->|"/mf-payments/*"| S3_Pay[("🪣 S3: mf-payments")]
+        CF -->|"/mf-billing/*"| S3_Bill[("🪣 S3: mf-billing")]
     end
 ```
 
@@ -398,35 +391,33 @@ flowchart TD
 
 ### 🟢 1. Alto Nivel (Decisión Estratégica)
 
-* **Patrón A (Bucket Físico por MF - Aislamiento Total):** Cada microfrontend tiene su propio bucket S3 independiente. Recomendado para organizaciones donde cada equipo o squad administra su propia cuenta de AWS o bucket S3 con permisos IAM aislados.
-* **Patrón B (Bucket Único de Remotos con Comodín `mf-*/*` - Cero Mantenimiento IaC):** Existe 1 bucket para el Host (`HostBucket`) y **1 solo bucket secundario para todos los remotos** (`RemotesBucket`). Cada nuevo MF se sube a su propia subcarpeta (`/mf-payments/`, `/mf-billing/`). CloudFront utiliza una regla con el comodín `mf-*/*`. **Ventaja:** Agregar un nuevo MF **no requiere tocar CloudFormation ni modificar la infraestructura**.
+* **Patrón A (Bucket Físico por MF - Aislamiento Total):** Cada microfrontend posee su propio bucket S3 independiente (`S3.1`, `S3.2`, `S3.N`). Esto garantiza un **aislamiento físico del 100%**, permitiendo que diferentes equipos o squads administren sus propios recursos S3 y políticas IAM sin riesgo de afectar a otros microfrontends ni al `host`.
 
 ---
 
-### 🟡 2. Medio Nivel (Arquitectura Técnica y Comodines en CloudFront)
+### 🟡 2. Medio Nivel (Arquitectura Técnica en CloudFront)
 
-#### Comparativa Técnica de Implementación:
-
-| Criterio | Patrón A: Bucket Aislado por MF | Patrón B: Bucket Único Remoto (`mf-*/*`) |
-| :--- | :--- | :--- |
-| **Uso de Comodín `*`** | No es posible en la raíz de origen (CloudFront requiere 1 Origen por cada Bucket S3). | **SÍ** (`PathPattern: "mf-*/*"` abarca cualquier subcarpeta de remotos). |
-| **Cambios en IaC (CloudFormation)** | Modificar `mfs-stack.yaml` por cada nuevo MF. | **Cero cambios en CloudFormation** al agregar nuevos MFs. |
-| **Seguridad IAM** | Aislamiento físico 100% por Bucket. | Aislamiento lógico por prefijo de carpeta (`s3:::bucket/mf-payments/*`). |
-| **Número de Buckets S3** | N Buckets creados. | 2 Buckets creados (`host` + `remotes`). |
+En esta arquitectura de aislamiento total, **CloudFront exige declarar 1 Origen y 1 Cache Behavior por cada Bucket S3**:
+- No es posible usar comodines `*` en la raíz de origen porque CloudFront necesita conocer el nombre de dominio DNS único de cada Bucket S3 (`s3-payments.amazonaws.com`, `s3-billing.amazonaws.com`).
+- Cada nuevo microfrontend se aprovisiona agregando su correspondiente conjunto de recursos en el archivo de infraestructura `mfs-stack.yaml`.
 
 ---
 
 ### 🔴 3. Bajo Nivel (Configuración Exclusiva de Infraestructura e IaC)
 
-Para implementar el **Patrón B (Comodín `mf-*/*`)**, las modificaciones se aplican directamente en el archivo de plantilla de CloudFormation [`infrastructure/cloudformation/mfs-stack.yaml`](file:///Volumes/Macintosh%20HD%20-%20Data/microfrontend/infrastructure/cloudformation/mfs-stack.yaml) en las siguientes ubicaciones exactas:
+Para agregar un nuevo microfrontend (ej. `mf-payments`), se añaden las siguientes 4 configuraciones exactas en la plantilla de CloudFormation [`infrastructure/cloudformation/mfs-stack.yaml`](file:///Volumes/Macintosh%20HD%20-%20Data/microfrontend/infrastructure/cloudformation/mfs-stack.yaml):
 
-#### 1. Ubicación: Sección `Resources:` (Creación del Bucket de Remotos)
-Reemplazar los N buckets remotos individuales por un solo bucket `RemotesBucket`:
+#### 1. Ubicación: Sección `Resources:` (Bucket S3 del nuevo MF)
 ```yaml
-RemotesBucket:
+MfPaymentsBucket:
   Type: AWS::S3::Bucket
   Properties:
-    BucketName: !Sub "${ProjectPrefix}-${Environment}-remotes"
+    BucketName: !Sub "${ProjectPrefix}-${Environment}-mf-payments"
+    PublicAccessBlockConfiguration:
+      BlockPublicAcls: true
+      BlockPublicPolicy: false
+      IgnorePublicAcls: true
+      RestrictPublicBuckets: false
     CorsConfiguration:
       CorsRules:
         - AllowedHeaders: ['*']
@@ -436,47 +427,41 @@ RemotesBucket:
 ```
 
 #### 2. Ubicación: Dentro de `CloudFrontDistribution.Properties.DistributionConfig.Origins`
-Agregar la referencia del origen hacia el bucket de remotos:
 ```yaml
-Origins:
-  - Id: HostOrigin
-    DomainName: !GetAtt HostBucket.RegionalDomainName
-    OriginAccessControlId: !GetAtt CloudFrontOAC.Id
-  - Id: RemotesOrigin
-    DomainName: !GetAtt RemotesBucket.RegionalDomainName
-    OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+- Id: MfPaymentsOrigin
+  DomainName: !GetAtt MfPaymentsBucket.RegionalDomainName
+  S3OriginConfig:
+    OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+  OriginAccessControlId: !GetAtt CloudFrontOAC.Id
 ```
 
 #### 3. Ubicación: Dentro de `CloudFrontDistribution.Properties.DistributionConfig.CacheBehaviors`
-Reemplazar todas las reglas individuales por la **única regla comodín**:
 ```yaml
-CacheBehaviors:
-  - PathPattern: "mf-*/*"  # <-- Regla comodín que sirve a cualquier microfrontend futuro
-    TargetOriginId: RemotesOrigin
-    ViewerProtocolPolicy: redirect-to-https
-    AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
-    CachedMethods: ['GET', 'HEAD']
-    Compress: true
-    ForwardedValues:
-      QueryString: true
-      Cookies:
-        Forward: none
+- PathPattern: "mf-payments/*"
+  TargetOriginId: MfPaymentsOrigin
+  ViewerProtocolPolicy: redirect-to-https
+  AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
+  CachedMethods: ['GET', 'HEAD']
+  Compress: true
+  ForwardedValues:
+    QueryString: true
+    Cookies:
+      Forward: none
 ```
 
-#### 4. Ubicación: Sección `Resources:` (Política de Seguridad Bucket Policy)
-Agregar la política de acceso firmada por OAC para el bucket de remotos:
+#### 4. Ubicación: Sección `Resources:` (S3 Bucket Policy firmada por OAC)
 ```yaml
-RemotesBucketPolicy:
+MfPaymentsBucketPolicy:
   Type: AWS::S3::BucketPolicy
   Properties:
-    Bucket: !Ref RemotesBucket
+    Bucket: !Ref MfPaymentsBucket
     PolicyDocument:
       Statement:
         - Effect: Allow
           Principal:
             Service: cloudfront.amazonaws.com
           Action: 's3:GetObject'
-          Resource: !Sub "${RemotesBucket.Arn}/*"
+          Resource: !Sub "${MfPaymentsBucket.Arn}/*"
           Condition:
             StringEquals:
               AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
