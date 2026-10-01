@@ -150,6 +150,7 @@ Resources:
         Enabled: true
         Comment: !Sub "Distribution for ${ProjectPrefix}-${Environment} Microfrontends"
         DefaultRootObject: index.html
+        Aliases: !If [HasCustomDomain, [!Ref DomainName], !Ref "AWS::NoValue"]
 
         # Custom error pages for SPA routing (Angular Host)
         CustomErrorResponses:
@@ -271,6 +272,9 @@ Resources:
               Service: cloudfront.amazonaws.com
             Action: 's3:GetObject'
             Resource: !Sub "${HostBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
   MfGithubProfilesBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -283,6 +287,9 @@ Resources:
               Service: cloudfront.amazonaws.com
             Action: 's3:GetObject'
             Resource: !Sub "${MfGithubProfilesBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
   MfUsersBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -295,6 +302,9 @@ Resources:
               Service: cloudfront.amazonaws.com
             Action: 's3:GetObject'
             Resource: !Sub "${MfUsersBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
   MfReposBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -307,6 +317,9 @@ Resources:
               Service: cloudfront.amazonaws.com
             Action: 's3:GetObject'
             Resource: !Sub "${MfReposBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
   MfComplexBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -319,6 +332,9 @@ Resources:
               Service: cloudfront.amazonaws.com
             Action: 's3:GetObject'
             Resource: !Sub "${MfComplexBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
   # =========================================================================
   # 5. ROUTE 53 HOSTED ZONE & DNS ALIAS RECORDS
