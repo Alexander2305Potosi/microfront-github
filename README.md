@@ -345,15 +345,22 @@ Si necesitas utilizar un Agente de Inteligencia Artificial (Antigravity, Copilot
 
 ---
 
-### 1. Diagnóstico: ¿Qué conlleva migrar de 1 Bucket S3 Monolítico a 2 (o N) Buckets S3 Independientes?
+### 1. Diagnóstico del Caso Real: Migración de 1 a 2 Buckets S3 (Host en S3.1 y MF en S3.2)
 
-#### 🔴 Escenario Inicial (1 Bucket Monolítico S3):
-Toda la aplicación vivía dentro de un solo bucket S3 (`mfs-app-dev-host`). En la raíz se alojaba el `host` (`/index.html`) y en subcarpetas vivían los módulos remotos (`/mf-payments/remoteEntry.json`). CloudFront apuntaba a un solo origen.
+#### 🔴 Planteamiento del Caso Real:
+Se tiene una arquitectura en AWS compuesta por **Route 53 + CloudFront + S3** donde S3 aloja el contenido estático del frontend:
+- **Escenario Inicial (1 Bucket Monolítico S3):** En la raíz del mismo bucket S3 (`mfs-app-dev-host`) se guardaba la aplicación `host` (`/index.html`) y en una carpeta subdirectorio `/mf-**` se guardaba el módulo remoto. El `host` llamaba a `remoteEntry.json` y este archivo se visualizaba correctamente a través de la URL de la página.
+- **El Problema al Crear un Nuevo S3 para el MF (`S3.2`):** Se creó un nuevo bucket S3 exclusivo para el microfrontend (`mfs-app-dev-mf-payments`). Sin embargo, al intentar abrir o cargar `remoteEntry.json`, S3 generaba una URL temporal y el llamado directo desde el navegador arrojaba un error de **"No Autorizado" (HTTP 403 Forbidden / Access Denied)**.
 
-#### 🟡 El Problema al Migrar a 2 Buckets S3 (`S3.1` para Host y `S3.2` para `mf-payments`):
-Al separar `mf-payments` a su propio bucket S3 independiente (`S3.2`: `mfs-app-dev-mf-payments`), si la aplicación o el navegador intenta acceder directamente a las URLs de S3 (`https://mfs-app-dev-mf-payments.s3.us-east-1.amazonaws.com/remoteEntry.json`), ocurren dos fallos graves:
-1. **Error HTTP 403 (Forbidden / Access Denied):** Porque `S3.2` se mantiene privado (`BlockPublicAccess: true`).
-2. **Bloqueos de CORS y URLs Temporales Expiradas:** La llamada desde el dominio del Host hacia una URL directa de S3 rompe la carga estática federada.
+#### ❓ ¿Qué se debe hacer para que el Host en S3.1 pueda llamar al MF en S3.2 sin errores 403 ni URLs temporales?
+
+Para que el Host en `S3.1` pueda invocar al microfrontend en `S3.2` de forma transparente y segura, **NUNCA se deben consumir URLs temporales ni endpoints directos de S3**. En su lugar, se aplican **3 acciones de infraestructura en CloudFront y S3**:
+
+1. **Registrar S3.2 como un nuevo "Origin" en CloudFront:** Se agrega la dirección del bucket `mfs-app-dev-mf-payments.s3.us-east-1.amazonaws.com` a la distribución existente de CloudFront.
+2. **Crear una Regla de Ruta (`CacheBehavior`) en CloudFront:** Se mapea la ruta `mf-payments/*` para que CloudFront dirija las peticiones hacia el origen de `S3.2`.
+3. **Aplicar la Bucket Policy con OAC en S3.2:** Se mantiene `S3.2` 100% privado y se concede permiso `s3:GetObject` únicamente al Service Principal de CloudFront firmado con la condición `AWS:SourceArn`.
+
+*Resultado:* El Host solicitará `https://mi-empresa-mfs.com/mf-payments/remoteEntry.json`. CloudFront interceptará la petición, leerá los archivos de `S3.2` de forma privada y los entregará al navegador en el **mismo origen que el Host**, eliminando de raíz los errores 403, las URLs temporales y los bloqueos de CORS.
 
 ---
 
