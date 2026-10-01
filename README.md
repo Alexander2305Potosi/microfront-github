@@ -337,85 +337,78 @@ Si necesitas utilizar un Agente de Inteligencia Artificial (Antigravity, Copilot
 
 ---
 
-## 📐 Caso de Estudio Arquitectónico: Desacoplamiento de Buckets S3 y Acceso a Microfrontends
+---
 
-### Problema: Migración de S3 Monolítico a S3 Independientes por Microfrontend
-Al separar los microfrontends de un solo bucket S3 monolítico (donde todo vivía bajo subcarpetas `/mf-*`) a **buckets S3 desacoplados e independientes por MF (ej. `S3.1` para Host y `S3.2` para `mf-*`)**, se pueden presentar dos problemas si no se configura la infraestructura adecuadamente:
-1. **Error HTTP 403 (Forbidden / Access Denied):** Al intentar consumir directamente las URLs de S3.2 (`https://s3.2.amazonaws.com/...`), S3 rechaza las peticiones por tener bloqueado el acceso público (`Block Public Access = true`).
-2. **URLs Temporales / Expirables o Bloqueos CORS:** Al no usar una CDN unificada, el llamado directo entre dominios o mediante URLs presignadas rompe la carga estática de `remoteEntry.json`.
+## 📐 Caso de Estudio Arquitectónico: Migración de 1 a 2 Buckets S3 y Escalabilidad de IaC para N Microfrontends
+
+*(Nota: Esta guía de aprovisionamiento y arquitectura aplica exclusivamente a la capa de Infraestructura e IaC en CloudFront y S3).*
+
+---
+
+### 1. Diagnóstico: ¿Qué conlleva migrar de 1 Bucket S3 Monolítico a 2 (o N) Buckets S3 Independientes?
+
+#### 🔴 Escenario Inicial (1 Bucket Monolítico S3):
+Toda la aplicación vivía dentro de un solo bucket S3 (`mfs-app-dev-host`). En la raíz se alojaba el `host` (`/index.html`) y en subcarpetas vivían los módulos remotos (`/mf-payments/remoteEntry.json`). CloudFront apuntaba a un solo origen.
+
+#### 🟡 El Problema al Migrar a 2 Buckets S3 (`S3.1` para Host y `S3.2` para `mf-payments`):
+Al separar `mf-payments` a su propio bucket S3 independiente (`S3.2`: `mfs-app-dev-mf-payments`), si la aplicación o el navegador intenta acceder directamente a las URLs de S3 (`https://mfs-app-dev-mf-payments.s3.us-east-1.amazonaws.com/remoteEntry.json`), ocurren dos fallos graves:
+1. **Error HTTP 403 (Forbidden / Access Denied):** Porque `S3.2` se mantiene privado (`BlockPublicAccess: true`).
+2. **Bloqueos de CORS y URLs Temporales Expiradas:** La llamada desde el dominio del Host hacia una URL directa de S3 rompe la carga estática federada.
+
+---
+
+### 🟢 2. Alto Nivel (Decisión Estratégica y ¿Qué se Gana?)
+
+Al implementar la arquitectura desacoplada con **Patrón A (Bucket Físico por MF - Aislamiento Total)** mediante CloudFront OAC:
 
 ```mermaid
 flowchart TD
-    Browser["💻 Navegador / Host (en S3.1)"] -->|"1. GET / (Host App)"| CF["⚡ AWS CloudFront CDN"]
-    Browser -->|"2. GET /mf-modulo/remoteEntry.json"| CF
+    Browser["💻 Navegador (https://mi-empresa-mfs.com)"] -->|"1. GET / (Carga Host App)"| CF["⚡ AWS CloudFront CDN (ID: E1A2B3C4D5E6F7)"]
+    Browser -->|"2. GET /mf-payments/remoteEntry.json"| CF
     
-    subgraph "AWS Cloud Infrastructure"
+    subgraph "AWS Cloud Infrastructure (Account: 123456789012)"
         direction TB
-        CF -->|"Path Pattern / (Default)"| S3_1[("🪣 S3.1: Host App")]
-        CF -->|"Path Pattern /mf-modulo/*"| S3_2[("🪣 S3.2: Nuevo Microfrontend")]
+        CF -->|"PathPattern / (Default)"| S3_1[("🪣 S3.1: mfs-app-dev-host")]
+        CF -->|"PathPattern /mf-payments/*"| S3_2[("🪣 S3.2: mfs-app-dev-mf-payments")]
+        CF -->|"PathPattern /mf-billing/*"| S3_3[("🪣 S3.3: mfs-app-dev-mf-billing")]
     end
 ```
 
-### Solución Arquitectónica Recomendada (3 Pasos)
-
-1. **Fachada Unificada en CloudFront (Origen y Cache Behavior):**
-   - En la distribución de CloudFront, se añade `S3.2` como un **Origin** independiente.
-   - Se crea un **Cache Behavior** para la ruta `mf-modulo/*` dirigida al origen `S3.2`.
-   - *Resultado:* El navegador solicita `https://mi-dominio.com/mf-modulo/remoteEntry.json`. Para la aplicación y el navegador, la petición es hacia el **mismo origen**, eliminando errores 403 y previniendo bloqueos de CORS.
-
-2. **Permisos de Lectura mediante OAC (Origin Access Control):**
-   - El bucket `S3.2` se mantiene 100% privado sin acceso público directo.
-   - En la **S3 Bucket Policy** de `S3.2`, se concede acceso `s3:GetObject` exclusivamente al Service Principal de CloudFront filtrado por la condición `AWS:SourceArn`.
-
-3. **Configuración CORS en S3 (En caso de dominios CDN independientes):**
-   - Si por razones de negocio `S3.2` se sirve a través de otro dominio o CDN separado, se deben configurar las reglas CORS (`AllowedOrigins`, `AllowedHeaders`, `AllowedMethods`) en `S3.2` permitiendo el dominio del Host.
+#### 🏆 ¿Qué se gana al migrar de 1 a 2 (o N) Buckets S3?
+1. **Aislamiento Total de Despliegues:** Un despliegue, borrado accidental o fallo en `mf-payments` (S3.2) jamás afecta a los archivos estáticos del `host` (S3.1) ni de otros microfrontends.
+2. **Seguridad Granular IAM:** Los desarrolladores del equipo de Pagos solo reciben permisos de escritura sobre `s3://mfs-app-dev-mf-payments/*`, previniendo que alteren el código del Shell principal.
+3. **Cero Cambios de Dominio y Eliminación Definitiva de CORS:** CloudFront actúa como **fachada unificada**. Para el navegador, las peticiones a `https://mi-empresa-mfs.com/mf-payments/*` y `https://mi-empresa-mfs.com/` ocurren bajo el **mismo origen**, eliminando errores 403 y llamadas inter-origen.
 
 ---
 
-## 🚀 Estrategias de Escalabilidad de Infraestructura (IaC) para N Microfrontends
+### 🟡 3. Medio Nivel (Arquitectura Técnica y Configuración de Red)
 
-*(Nota: Esta guía de aprovisionamiento aplica exclusivamente a la capa de Infraestructura e IaC en CloudFront y S3).*
+Para migrar de 1 a N buckets de forma segura, CloudFront exige declarar **1 Origen** y **1 Regla de Caché (Cache Behavior)** por cada bucket S3 desacoplado:
 
-Cuando el ecosistema crece de 5 a **decenas de Microfrontends** (`mf-payments`, `mf-billing`, `mf-reports`), se aplica el **Patrón A (Bucket Físico por MF - Aislamiento Total)**.
-
-```mermaid
-flowchart TD
-    subgraph "Patrón A: Buckets Físicos Aislados por MF (Aislamiento Total)"
-        CF["⚡ AWS CloudFront CDN"] -->|"/mf-users/*"| S3_Users[("🪣 S3: mf-users")]
-        CF -->|"/mf-payments/*"| S3_Pay[("🪣 S3: mf-payments")]
-        CF -->|"/mf-billing/*"| S3_Bill[("🪣 S3: mf-billing")]
-    end
-```
+| Componente | Valores Concretos de Ejemplo | Función en la Arquitectura |
+| :--- | :--- | :--- |
+| **AWS Account ID** | `123456789012` | Cuenta AWS donde se despliegan los recursos. |
+| **CloudFront Distribution ID** | `E1A2B3C4D5E6F7` | Identificador único de la fachada CDN. |
+| **Bucket Host (S3.1)** | `mfs-app-dev-host` | Almacena el `index.html` y bundles del Shell (`dist/host`). |
+| **Bucket MF Payments (S3.2)** | `mfs-app-dev-mf-payments` | Almacena los bundles y `remoteEntry.json` del remoto (`dist/mf-payments`). |
+| **Ruta en CloudFront** | `/mf-payments/*` | Regla de enrutamiento que redirige el tráfico hacia S3.2. |
+| **Dominio Público** | `https://mi-empresa-mfs.com` | Dominio único expuesto al cliente. |
 
 ---
 
-### 🟢 1. Alto Nivel (Decisión Estratégica)
+### 🔴 4. Bajo Nivel (Configuraciones Exactas e IaC con Valores Reales)
 
-* **Patrón A (Bucket Físico por MF - Aislamiento Total):** Cada microfrontend posee su propio bucket S3 independiente (`S3.1`, `S3.2`, `S3.N`). Esto garantiza un **aislamiento físico del 100%**, permitiendo que diferentes equipos o squads administren sus propios recursos S3 y políticas IAM sin riesgo de afectar a otros microfrontends ni al `host`.
+Para migrar o agregar un nuevo microfrontend (ej. `mf-payments`), se aplican los siguientes **4 bloques de código exactos** en la plantilla de CloudFormation [`infrastructure/cloudformation/mfs-stack.yaml`](file:///Volumes/Macintosh%20HD%20-%20Data/microfrontend/infrastructure/cloudformation/mfs-stack.yaml):
 
----
-
-### 🟡 2. Medio Nivel (Arquitectura Técnica en CloudFront)
-
-En esta arquitectura de aislamiento total, **CloudFront exige declarar 1 Origen y 1 Cache Behavior por cada Bucket S3**:
-- No es posible usar comodines `*` en la raíz de origen porque CloudFront necesita conocer el nombre de dominio DNS único de cada Bucket S3 (`s3-payments.amazonaws.com`, `s3-billing.amazonaws.com`).
-- Cada nuevo microfrontend se aprovisiona agregando su correspondiente conjunto de recursos en el archivo de infraestructura `mfs-stack.yaml`.
-
----
-
-### 🔴 3. Bajo Nivel (Configuración Exclusiva de Infraestructura e IaC)
-
-Para agregar un nuevo microfrontend (ej. `mf-payments`), se añaden las siguientes 4 configuraciones exactas en la plantilla de CloudFormation [`infrastructure/cloudformation/mfs-stack.yaml`](file:///Volumes/Macintosh%20HD%20-%20Data/microfrontend/infrastructure/cloudformation/mfs-stack.yaml):
-
-#### 1. Ubicación: Sección `Resources:` (Bucket S3 del nuevo MF)
-* **¿Para qué sirve?:** Crea un contenedor de almacenamiento estático aislado dedicado exclusivamente a alojar los archivos compilados JS, CSS y HTML del nuevo microfrontend remoto (`mf-payments`).
-* **¿Qué se gana?:** **Aislamiento total de almacenamiento y ciclo de vida.** Al tener su propio bucket S3, los despliegues, versiones o limpiezas de `mf-payments` no afectan al `host` ni a otros microfrontends. Permite otorgar permisos IAM independientes a los desarrolladores de cada equipo.
+#### 1. Ubicación: Sección `Resources:` (Bucket S3.2 dedicado)
+* **¿Para qué sirve?:** Crea el contenedor de almacenamiento aislado para `mf-payments`.
+* **¿Qué se gana?:** Aislamiento físico de archivos e independencia de CI/CD.
 
 ```yaml
 MfPaymentsBucket:
   Type: AWS::S3::Bucket
   Properties:
-    BucketName: !Sub "${ProjectPrefix}-${Environment}-mf-payments"
+    BucketName: mfs-app-dev-mf-payments
     PublicAccessBlockConfiguration:
       BlockPublicAcls: true
       BlockPublicPolicy: false
@@ -430,20 +423,20 @@ MfPaymentsBucket:
 ```
 
 #### 2. Ubicación: Dentro de `CloudFrontDistribution.Properties.DistributionConfig.Origins`
-* **¿Para qué sirve?:** Registra el nuevo Bucket S3 como un punto de origen de datos válido dentro de la CDN de CloudFront mediante su nombre de dominio regional (`RegionalDomainName`).
-* **¿Qué se gana?:** **Conectividad unificada en la red de AWS.** CloudFront reconoce dónde residen los archivos estáticos de este microfrontend, permitiendo conectarlo internamente sin exponer URLs directas o temporales de S3.
+* **¿Para qué sirve?:** Registra el bucket S3.2 como punto de origen de datos en CloudFront.
+* **¿Qué se gana?:** Conectividad privada dentro de la red global de AWS sin exponer la URL directa de S3.
 
 ```yaml
 - Id: MfPaymentsOrigin
-  DomainName: !GetAtt MfPaymentsBucket.RegionalDomainName
+  DomainName: mfs-app-dev-mf-payments.s3.us-east-1.amazonaws.com
   S3OriginConfig:
     OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
   OriginAccessControlId: !GetAtt CloudFrontOAC.Id
 ```
 
 #### 3. Ubicación: Dentro de `CloudFrontDistribution.Properties.DistributionConfig.CacheBehaviors`
-* **¿Para qué sirve?:** Define la regla de enrutamiento y caché de CloudFront para la ruta específica del microfrontend (`PathPattern: "mf-payments/*"`), dirigiéndola hacia su origen S3 asignado (`MfPaymentsOrigin`).
-* **¿Qué se gana?:** **Eliminación de CORS, compresión automática y velocidad.** El navegador consume el microfrontend bajo la misma URL del dominio principal (`https://mi-dominio.com/mf-payments/*`), resolviendo bloqueos inter-origen (CORS). Además, habilita compresión Gzip/Brotli automática y distribución geográfica de alta velocidad.
+* **¿Para qué sirve?:** Enruta las peticiones que comiencen con `/mf-payments/*` hacia `MfPaymentsOrigin`.
+* **¿Qué se gana?:** Elimina bloqueos de CORS, habilita compresión Gzip/Brotli y almacenamiento en caché de borde.
 
 ```yaml
 - PathPattern: "mf-payments/*"
@@ -458,10 +451,11 @@ MfPaymentsBucket:
       Forward: none
 ```
 
-#### 4. Ubicación: Sección `Resources:` (S3 Bucket Policy firmada por OAC)
-* **¿Para qué sirve?:** Establece una política de seguridad estricta en el bucket S3 para permitir la lectura de archivos (`s3:GetObject`) exclusivamente a las peticiones firmadas por el Service Principal de CloudFront filtradas por su `AWS:SourceArn`.
-* **¿Qué se gana?:** **Seguridad de Nivel Empresarial (Bucket 100% Privado).** Bloquea cualquier intento de descarga directa desde el S3 sin pasar por CloudFront. Nadie en internet puede saltarse las reglas de seguridad, HTTPS o invalidaciones de la CDN.
+#### 4. Ubicación: Sección `Resources:` (Política S3 Bucket Policy con OAC y JSON de Referencia)
+* **¿Para qué sirve?:** Concede permisos `s3:GetObject` únicamente a las peticiones firmadas por CloudFront verificando su `AWS:SourceArn`.
+* **¿Qué se gana?:** Seguridad de nivel empresarial. El bucket S3.2 permanece **100% privado** y bloqueado al acceso público directo.
 
+##### En CloudFormation (YAML):
 ```yaml
 MfPaymentsBucketPolicy:
   Type: AWS::S3::BucketPolicy
@@ -473,10 +467,34 @@ MfPaymentsBucketPolicy:
           Principal:
             Service: cloudfront.amazonaws.com
           Action: 's3:GetObject'
-          Resource: !Sub "${MfPaymentsBucket.Arn}/*"
+          Resource: 'arn:aws:s3:::mfs-app-dev-mf-payments/*'
           Condition:
             StringEquals:
-              AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
+              AWS:SourceArn: 'arn:aws:cloudfront::123456789012:distribution/E1A2B3C4D5E6F7'
 ```
+
+##### Representación equivalente en Política S3 nativa (JSON AWS Console):
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowCloudFrontServicePrincipalReadOnly",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::mfs-app-dev-mf-payments/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceArn": "arn:aws:cloudfront::123456789012:distribution/E1A2B3C4D5E6F7"
+        }
+      }
+    }
+  ]
+}
+```
+
 
 
