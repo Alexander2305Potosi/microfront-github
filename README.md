@@ -372,9 +372,11 @@ flowchart TD
 
 ---
 
-## 🚀 Estrategias de Escalabilidad para N Microfrontends
+## 🚀 Estrategias de Escalabilidad de Infraestructura (IaC) para N Microfrontends
 
-Cuando el ecosistema crece de 5 a **decenas de Microfrontends** (`mf-payments`, `mf-billing`, `mf-reports`), existen dos patrones de arquitectura para escalar la infraestructura y la federación:
+*(Nota: Esta estrategia de comodines y patrones de almacenamiento aplica exclusivamente a la capa de Infraestructura e IaC en CloudFront y S3. En la capa de aplicación Angular / Native Federation, cada microfrontend sigue exponiendo sus componentes e integrando sus rutas independientemente).*
+
+Cuando el ecosistema crece de 5 a **decenas de Microfrontends** (`mf-payments`, `mf-billing`, `mf-reports`), existen dos patrones de arquitectura para escalar el aprovisionamiento de infraestructura:
 
 ```mermaid
 flowchart TD
