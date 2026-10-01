@@ -370,3 +370,112 @@ flowchart TD
 3. **Configuración CORS en S3 (En caso de dominios CDN independientes):**
    - Si por razones de negocio `S3.2` se sirve a través de otro dominio o CDN separado, se deben configurar las reglas CORS (`AllowedOrigins`, `AllowedHeaders`, `AllowedMethods`) en `S3.2` permitiendo el dominio del Host.
 
+---
+
+## 🚀 Estrategias de Escalabilidad para N Microfrontends
+
+Cuando el ecosistema crece de 5 a **decenas de Microfrontends** (`mf-payments`, `mf-billing`, `mf-reports`), existen dos patrones de arquitectura para escalar la infraestructura y la federación:
+
+```mermaid
+flowchart TD
+    subgraph "Patrón A: Buckets Físicos Aislados por MF (Aislamiento Total)"
+        CF_A["⚡ CloudFront CDN"] -->|"/mf-users/*"| S3_Users[("🪣 S3: mf-users")]
+        CF_A -->|"/mf-payments/*"| S3_Pay[("🪣 S3: mf-payments")]
+        CF_A -->|"/mf-billing/*"| S3_Bill[("🪣 S3: mf-billing")]
+    end
+
+    subgraph "Patrón B: Bucket Único de Remotos con Comodín (Cero-Mantenimiento IaC)"
+        CF_B["⚡ CloudFront CDN"] -->|"PathPattern: mf-*/* (Comodín)"| S3_Remotes[("🪣 S3 Único: mfs-app-dev-remotes")]
+        S3_Remotes --> Folder1["📁 /mf-users/"]
+        S3_Remotes --> Folder2["📁 /mf-payments/"]
+        S3_Remotes --> Folder3["📁 /mf-billing/"]
+    end
+```
+
+---
+
+### 🟢 1. Alto Nivel (Decisión Estratégica)
+
+* **Patrón A (Bucket Físico por MF - Aislamiento Total):** Cada microfrontend tiene su propio bucket S3 independiente. Recomendado para organizaciones donde cada equipo o squad administra su propia cuenta de AWS o bucket S3 con permisos IAM aislados.
+* **Patrón B (Bucket Único de Remotos con Comodín `mf-*/*` - Cero Mantenimiento IaC):** Existe 1 bucket para el Host (`HostBucket`) y **1 solo bucket secundario para todos los remotos** (`RemotesBucket`). Cada nuevo MF se sube a su propia subcarpeta (`/mf-payments/`, `/mf-billing/`). CloudFront utiliza una regla con el comodín `mf-*/*`. **Ventaja:** Agregar un nuevo MF **no requiere tocar CloudFormation ni modificar la infraestructura**.
+
+---
+
+### 🟡 2. Medio Nivel (Arquitectura Técnica y Comodines en CloudFront)
+
+#### Comparativa Técnica de Implementación:
+
+| Criterio | Patrón A: Bucket Aislado por MF | Patrón B: Bucket Único Remoto (`mf-*/*`) |
+| :--- | :--- | :--- |
+| **Uso de Comodín `*`** | No es posible en la raíz de origen (CloudFront requiere 1 Origen por cada Bucket S3). | **SÍ** (`PathPattern: "mf-*/*"` abarca cualquier subcarpeta de remotos). |
+| **Cambios en IaC (CloudFormation)** | Modificar `mfs-stack.yaml` por cada nuevo MF. | **Cero cambios en CloudFormation** al agregar nuevos MFs. |
+| **Seguridad IAM** | Aislamiento físico 100% por Bucket. | Aislamiento lógico por prefijo de carpeta (`s3:::bucket/mf-payments/*`). |
+| **Número de Buckets S3** | N Buckets creados. | 2 Buckets creados (`host` + `remotes`). |
+
+---
+
+### 🔴 3. Bajo Nivel (Configuraciones Exactas y Código)
+
+#### A. Configuración YAML en CloudFormation para el Patrón B (Comodín `mf-*/*`):
+
+```yaml
+Resources:
+  # 1. Bucket Único para Todos los Remotos
+  RemotesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${ProjectPrefix}-${Environment}-remotes"
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'HEAD']
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # 2. Origen Único en CloudFront
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - Id: HostOrigin
+            DomainName: !GetAtt HostBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+          - Id: RemotesOrigin
+            DomainName: !GetAtt RemotesBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+
+        # 3. ÚNICA REGLA DE CACHÉ CON COMODÍN (Abarca infinitos MFs futuros)
+        CacheBehaviors:
+          - PathPattern: "mf-*/*"
+            TargetOriginId: RemotesOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: ['GET', 'HEAD', 'OPTIONS']
+            CachedMethods: ['GET', 'HEAD']
+            Compress: true
+            ForwardedValues:
+              QueryString: true
+              Cookies:
+                Forward: none
+```
+
+#### B. Registro en la Aplicación (Angular / Native Federation):
+
+Para consumir el nuevo MF `mf-payments`, solo se requieren 2 pasos en la aplicación Angular:
+
+1. **Registrar la URL en el Manifiesto (`host/public/federation.manifest.prod.json`):**
+   ```json
+   {
+     "mf-payments": "https://mi-dominio.com/mf-payments/remoteEntry.json"
+   }
+   ```
+2. **Cargar la Ruta Pérez en el Host (`host/src/app/app.routes.ts`):**
+   ```typescript
+   {
+     path: 'payments',
+     loadComponent: () => loadRemoteModule('mf-payments', './PaymentsRouter')
+       .then(m => m.PaymentsComponent)
+   }
+   ```
+
+

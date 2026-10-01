@@ -11,7 +11,10 @@
     "test:watch": "jest --watch",
     "serve:ssr:host": "node dist/host/server/server.mjs",
     "infrastructure:ministack": "./infrastructure/scripts/deploy-ministack.sh",
-    "infrastructure:aws": "./infrastructure/scripts/deploy-aws.sh"
+    "infrastructure:aws": "./infrastructure/scripts/deploy-aws.sh",
+    "ministack:start": "docker compose -f infrastructure/docker-compose.yml up -d",
+    "ministack:stop": "docker compose -f infrastructure/docker-compose.yml down",
+    "ministack:logs": "docker compose -f infrastructure/docker-compose.yml logs -f"
   },
   "private": true,
   "dependencies": {
