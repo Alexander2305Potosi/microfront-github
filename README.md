@@ -408,6 +408,9 @@ En esta arquitectura de aislamiento total, **CloudFront exige declarar 1 Origen 
 Para agregar un nuevo microfrontend (ej. `mf-payments`), se añaden las siguientes 4 configuraciones exactas en la plantilla de CloudFormation [`infrastructure/cloudformation/mfs-stack.yaml`](file:///Volumes/Macintosh%20HD%20-%20Data/microfrontend/infrastructure/cloudformation/mfs-stack.yaml):
 
 #### 1. Ubicación: Sección `Resources:` (Bucket S3 del nuevo MF)
+* **¿Para qué sirve?:** Crea un contenedor de almacenamiento estático aislado dedicado exclusivamente a alojar los archivos compilados JS, CSS y HTML del nuevo microfrontend remoto (`mf-payments`).
+* **¿Qué se gana?:** **Aislamiento total de almacenamiento y ciclo de vida.** Al tener su propio bucket S3, los despliegues, versiones o limpiezas de `mf-payments` no afectan al `host` ni a otros microfrontends. Permite otorgar permisos IAM independientes a los desarrolladores de cada equipo.
+
 ```yaml
 MfPaymentsBucket:
   Type: AWS::S3::Bucket
@@ -427,6 +430,9 @@ MfPaymentsBucket:
 ```
 
 #### 2. Ubicación: Dentro de `CloudFrontDistribution.Properties.DistributionConfig.Origins`
+* **¿Para qué sirve?:** Registra el nuevo Bucket S3 como un punto de origen de datos válido dentro de la CDN de CloudFront mediante su nombre de dominio regional (`RegionalDomainName`).
+* **¿Qué se gana?:** **Conectividad unificada en la red de AWS.** CloudFront reconoce dónde residen los archivos estáticos de este microfrontend, permitiendo conectarlo internamente sin exponer URLs directas o temporales de S3.
+
 ```yaml
 - Id: MfPaymentsOrigin
   DomainName: !GetAtt MfPaymentsBucket.RegionalDomainName
@@ -436,6 +442,9 @@ MfPaymentsBucket:
 ```
 
 #### 3. Ubicación: Dentro de `CloudFrontDistribution.Properties.DistributionConfig.CacheBehaviors`
+* **¿Para qué sirve?:** Define la regla de enrutamiento y caché de CloudFront para la ruta específica del microfrontend (`PathPattern: "mf-payments/*"`), dirigiéndola hacia su origen S3 asignado (`MfPaymentsOrigin`).
+* **¿Qué se gana?:** **Eliminación de CORS, compresión automática y velocidad.** El navegador consume el microfrontend bajo la misma URL del dominio principal (`https://mi-dominio.com/mf-payments/*`), resolviendo bloqueos inter-origen (CORS). Además, habilita compresión Gzip/Brotli automática y distribución geográfica de alta velocidad.
+
 ```yaml
 - PathPattern: "mf-payments/*"
   TargetOriginId: MfPaymentsOrigin
@@ -450,6 +459,9 @@ MfPaymentsBucket:
 ```
 
 #### 4. Ubicación: Sección `Resources:` (S3 Bucket Policy firmada por OAC)
+* **¿Para qué sirve?:** Establece una política de seguridad estricta en el bucket S3 para permitir la lectura de archivos (`s3:GetObject`) exclusivamente a las peticiones firmadas por el Service Principal de CloudFront filtradas por su `AWS:SourceArn`.
+* **¿Qué se gana?:** **Seguridad de Nivel Empresarial (Bucket 100% Privado).** Bloquea cualquier intento de descarga directa desde el S3 sin pasar por CloudFront. Nadie en internet puede saltarse las reglas de seguridad, HTTPS o invalidaciones de la CDN.
+
 ```yaml
 MfPaymentsBucketPolicy:
   Type: AWS::S3::BucketPolicy
