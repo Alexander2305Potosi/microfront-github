@@ -505,3 +505,646 @@ MfPaymentsBucketPolicy:
 
 
 
+---
+
+## 🧪 Análisis de Configuración Jest — Error `core-shared` no encontrado
+
+> **Contexto:** Este análisis documenta el diagnóstico y solución del error `Could not locate module @ecommerce/core-shared` detectado al ejecutar `npm run test:product-management` en un monorepo Angular.
+
+---
+
+### 📋 Resumen del error
+
+```
+Configuration error:
+
+Could not locate module @ecommerce/core-shared mapped as:
+C:\ecommerce-application\product-management\core-shared\public-api.ts.
+
+Please check your configuration for these entries:
+{
+  "moduleNameMapper": {
+    "/^@ecommerce\/core\-shared$/": "C:\ecommerce-application\product-management\core-shared\public-api.ts"
+  },
+  "resolver": undefined
+}
+```
+
+**10 suites fallaron**, todas con la misma causa raíz. Las afectadas fueron:
+
+| Archivo spec | Importación problemática |
+|---|---|
+| `inventory.service.spec.ts` | `import { CoreAuthService, User } from '@ecommerce/core-shared'` |
+| `product-table.component.spec.ts` | (transitivo vía `inventory.service.ts`) |
+| `filters.component.spec.ts` | (transitivo vía `inventory.service.ts`) |
+| `analytics.service.spec.ts` | `import { UserModel, TokenDecode } from '@ecommerce/core-shared'` |
+| `inventory-detail.service.spec.ts` | (transitivo vía `auth.service.mock.ts`) |
+| `product-catalog.component.spec.ts` | `import { DialogModel, DynamicFormComponent } from '@ecommerce/core-shared'` |
+| `category-settings.component.spec.ts` | `import { CoreAuthService } from '@ecommerce/core-shared'` |
+| `inventory-reports.component.spec.ts` | (transitivo vía `inventory.service.ts`) |
+| `audit-log.component.spec.ts` | `import { DialogModel, DynamicFormComponent } from '@ecommerce/core-shared'` |
+| `analytics.component.spec.ts` | `import { DialogModel, DynamicFormComponent } from '@ecommerce/core-shared'` |
+
+---
+
+### 🔍 Causa raíz — Mismatch de `rootDir` vs ubicación real de `core-shared`
+
+El comando que lanza los tests es:
+
+```bash
+jest --coverage --rootDir=product-management
+```
+
+Esto establece `<rootDir>` = `C:\ecommerce-application\product-management\`.
+
+El `jest.config.js` dentro de `product-management/` tiene el mapper:
+
+```js
+// ❌ INCORRECTO — product-management/jest.config.js
+moduleNameMapper: {
+  '^@ecommerce/core-shared$': '<rootDir>/core-shared/public-api.ts'
+  //                           ↑ resuelve a:
+  //   C:\ecommerce-application\product-management\core-shared\public-api.ts
+  //   ← Esta ruta NO EXISTE
+}
+```
+
+Pero `core-shared` está un nivel arriba del `rootDir`:
+
+```
+C:\ecommerce-application\
+├── node_modules/
+├── package.json
+├── core-shared/               ← ✅ Está aquí (raíz del monorepo)
+│   └── public-api.ts
+└── product-management/        ← rootDir del jest
+    ├── jest.config.js
+    └── src/
+```
+
+```
+C:\ecommerce-application\
+└── product-management\
+    └── core-shared\           ← ❌ Jest busca aquí (no existe)
+        └── public-api.ts
+```
+
+---
+
+### ✅ Solución — Ajustar el path en `moduleNameMapper`
+
+**Opción 1 — Subir un nivel con `../` (mínima intervención):**
+
+```js
+// product-management/jest.config.js
+module.exports = {
+  moduleNameMapper: {
+    '^@ecommerce/core-shared$': '<rootDir>/../core-shared/public-api.ts'
+    //                                    ↑ sube un nivel a la raíz del monorepo
+  }
+};
+```
+
+**Opción 2 — Usar `__dirname` para una ruta absoluta robusta:**
+
+```js
+// product-management/jest.config.js
+const path = require('path');
+
+module.exports = {
+  moduleNameMapper: {
+    '^@ecommerce/core-shared$': path.resolve(__dirname, '../core-shared/public-api.ts')
+  }
+};
+```
+
+**Opción 3 — Mover la configuración Jest a la raíz del monorepo** (patrón recomendado para monorepos):
+
+```js
+// jest.config.js (en la raíz C:\ecommerce-application\)
+module.exports = {
+  moduleNameMapper: {
+    '^@ecommerce/core-shared$': '<rootDir>/core-shared/public-api.ts'
+    //                           ↑ ahora rootDir = raíz del monorepo ✅
+  }
+};
+```
+
+Y en `package.json` raíz:
+
+```json
+{
+  "scripts": {
+    "test:product-management": "jest --coverage --testPathPattern=product-management"
+  }
+}
+```
+
+---
+
+### 🗂️ Estado de archivos Jest en este monorepo (referencia)
+
+Este monorepo (`microfrontend`) tiene una configuración Jest **correctamente ubicada** en la raíz. Sirve como referencia de la estructura esperada:
+
+```
+microfrontend/                        ← rootDir al correr "npm test"
+├── jest.config.js                    ← Configuración centralizada
+├── setup-jest.ts                     ← Setup global
+├── tsconfig.json                     ← paths: { "core-shared": [...] }
+├── tsconfig.spec.json                ← Extiende tsconfig.json
+│
+├── core-shared/                      ← Librería compartida real
+│   └── src/
+│       └── public-api.ts             ← Punto de entrada
+│
+└── host/src/app/
+    ├── core/interceptors/auth.interceptor.spec.ts   ✅ PASS
+    ├── login/login.component.spec.ts                ✅ PASS
+    └── dashboard/dashboard.component.spec.ts        ❌ FAIL (mock faltante)
+```
+
+**[`jest.config.js`](jest.config.js) — Configuración actual (correcta):**
+
+```js
+module.exports = {
+  preset: 'jest-preset-angular',
+  setupFilesAfterEnv: ['<rootDir>/setup-jest.ts'],
+  testEnvironment: 'jsdom',
+  modulePaths: ['<rootDir>'],
+  moduleNameMapper: {
+    '^core-shared$': '<rootDir>/core-shared/src/public-api.ts'
+    // ✅ rootDir = raíz del monorepo → ruta correctamente resuelta
+  },
+  testMatch: ['**/+(*.)+(spec).+(ts)'],
+  transform: {
+    '^.+\\.(ts|mjs|js|html)$': ['jest-preset-angular', {
+      tsconfig: '<rootDir>/tsconfig.spec.json',
+      stringifyContentPathRegex: '\\.(html|svg)$',
+    }],
+  },
+  transformIgnorePatterns: ['node_modules/(?!.*\\.mjs$)'],
+  moduleFileExtensions: ['ts', 'html', 'js', 'json', 'mjs'],
+};
+```
+
+**[`tsconfig.json`](tsconfig.json) — Paths de TypeScript (deben espejear el `moduleNameMapper`):**
+
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "core-shared": ["./core-shared/src/public-api.ts"]
+    }
+  }
+}
+```
+
+> ⚠️ **Regla crítica:** El `moduleNameMapper` de Jest y los `paths` del `tsconfig.json` **siempre deben estar sincronizados**. Si TypeScript resuelve `core-shared` desde `./core-shared/src/public-api.ts`, Jest debe resolver exactamente el mismo archivo.
+
+---
+
+### 🔄 Comparativa: ecommerce-application vs microfrontend
+
+| Aspecto | ❌ ecommerce-application (roto) | ✅ microfrontend (correcto) |
+|---|---|---|
+| Nombre del paquete compartido | `@ecommerce/core-shared` | `core-shared` |
+| `rootDir` al ejecutar tests | `product-management/` (sub-carpeta) | `/microfrontend` (raíz) |
+| `jest.config.js` ubicado en | `product-management/jest.config.js` | `jest.config.js` (raíz) |
+| Path mapeado | `<rootDir>/core-shared/public-api.ts` ❌ | `<rootDir>/core-shared/src/public-api.ts` ✅ |
+| Ruta resuelta | `…/product-management/core-shared/…` (no existe) | `…/microfrontend/core-shared/src/…` (existe) |
+| Sincronización tsconfig ↔ jest | Desincronizados | Sincronizados |
+
+---
+
+## 🏗️ Estructura de Pruebas Jest para Angular 2026 (Angular 22+)
+
+Angular 22 introduce cambios fundamentales en cómo se escriben y configuran las pruebas. Esta sección documenta la estructura completa y las diferencias respecto a versiones anteriores.
+
+---
+
+### 📦 Stack de dependencias (2026)
+
+```json
+{
+  "devDependencies": {
+    "jest": "^30.x",
+    "jest-environment-jsdom": "^30.x",
+    "jest-preset-angular": "^17.x",
+    "@types/jest": "^30.x"
+  }
+}
+```
+
+> ⚠️ Angular 22 **eliminó el soporte oficial de Karma/Jasmine** en proyectos nuevos. Jest con `jest-preset-angular` es el estándar de facto en 2026.
+
+---
+
+### 📁 Estructura de archivos de configuración
+
+```
+monorepo-root/
+│
+├── jest.config.js          ← (1) Configuración central de Jest
+├── setup-jest.ts           ← (2) Bootstrap del entorno de test
+├── tsconfig.json           ← (3) Paths de TypeScript (compilación)
+├── tsconfig.spec.json      ← (4) Extiende tsconfig.json para tests
+│
+└── src/
+    └── app/
+        └── feature/
+            ├── feature.component.ts
+            └── feature.component.spec.ts   ← (5) Archivo de test
+```
+
+---
+
+### (1) `jest.config.js` — Configuración central
+
+```js
+module.exports = {
+  // Preset oficial para Angular + Jest
+  preset: 'jest-preset-angular',
+
+  // (2) Archivo que se ejecuta antes de cada suite
+  setupFilesAfterEnv: ['<rootDir>/setup-jest.ts'],
+
+  // jsdom simula el DOM del navegador en Node.js
+  testEnvironment: 'jsdom',
+
+  // Permite imports sin prefijo (ej: import 'core-shared' en lugar de '../../../core-shared')
+  modulePaths: ['<rootDir>'],
+
+  // ✅ CLAVE: mapea alias de módulos locales/monorepo para que Jest los encuentre
+  moduleNameMapper: {
+    '^core-shared$': '<rootDir>/core-shared/src/public-api.ts',
+    // Agregar aquí cualquier librería interna del monorepo:
+    // '^@mi-empresa/ui-kit$': '<rootDir>/libs/ui-kit/src/public-api.ts',
+  },
+
+  // Solo ejecuta archivos .spec.ts
+  testMatch: ['**/+(*.)+(spec).+(ts)'],
+
+  // Transpila TypeScript, ESM y HTML con jest-preset-angular
+  transform: {
+    '^.+\\.(ts|mjs|js|html)$': [
+      'jest-preset-angular',
+      {
+        tsconfig: '<rootDir>/tsconfig.spec.json',
+        stringifyContentPathRegex: '\\.(html|svg)$',
+      },
+    ],
+  },
+
+  // Permite que Jest procese paquetes ESM de node_modules (ej: @angular/*)
+  transformIgnorePatterns: ['node_modules/(?!.*\\.mjs$)'],
+
+  moduleFileExtensions: ['ts', 'html', 'js', 'json', 'mjs'],
+};
+```
+
+---
+
+### (2) `setup-jest.ts` — Bootstrap zoneless (Angular 18+)
+
+```ts
+// Angular 18+ introdujo el modo Zoneless (sin Zone.js)
+// Este es el setup recomendado en 2026:
+import { setupZonelessTestEnv } from 'jest-preset-angular/setup-env/zoneless';
+setupZonelessTestEnv();
+
+// ⚠️ Si tu app AÚN usa Zone.js, usa en su lugar:
+// import 'jest-preset-angular/setup-env/zone';
+```
+
+| Modo | Cuándo usarlo |
+|---|---|
+| `setupZonelessTestEnv()` | Angular 18+ con `provideExperimentalZonelessChangeDetection()` |
+| `zone` setup | Apps legacy que mantienen `zone.js` en `polyfills` |
+
+---
+
+### (3) `tsconfig.json` — Paths (deben espejear `moduleNameMapper`)
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "preserve",       // ← Requerido por Angular 22 para ESM
+    "isolatedModules": true,    // ← Requerido por jest-preset-angular
+    "experimentalDecorators": true,
+    "paths": {
+      // ✅ DEBEN ser idénticos a los valores en moduleNameMapper
+      "core-shared": ["./core-shared/src/public-api.ts"]
+    }
+  }
+}
+```
+
+---
+
+### (4) `tsconfig.spec.json` — Extensión para tests
+
+```json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/spec",
+    "types": ["jest"]           // Registra los tipos globales de Jest (describe, it, expect...)
+  },
+  "include": [
+    "**/*.spec.ts",             // Todos los archivos de test
+    "**/*.d.ts"
+  ]
+}
+```
+
+---
+
+### (5) Anatomía de un `.spec.ts` en Angular 2026
+
+Angular 22 usa **componentes standalone** por defecto. La estructura del spec cambió significativamente:
+
+#### ✅ Componente standalone (patrón 2026)
+
+```ts
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { MyComponent } from './my.component';
+import { MyService } from '../services/my.service';
+
+describe('MyComponent', () => {
+  let component: MyComponent;
+  let fixture: ComponentFixture<MyComponent>;
+
+  // 1. Mock de servicios con dependencias externas (MSAL, HTTP, etc.)
+  const mockMyService = {
+    getData: jest.fn().mockReturnValue([]),
+    isActive: jest.fn().mockReturnValue(true),
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      // 2. Componentes standalone van en 'imports', NO en 'declarations'
+      imports: [MyComponent],
+
+      // 3. Providers: usa funciones 'provide*' de Angular 22
+      providers: [
+        provideRouter([]),                              // Router
+        { provide: MyService, useValue: mockMyService } // Mock del servicio
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MyComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges(); // Dispara ngOnInit y detección de cambios inicial
+  });
+
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should call getData on init', () => {
+    expect(mockMyService.getData).toHaveBeenCalled();
+  });
+});
+```
+
+#### ✅ Servicio con dependencias HTTP
+
+```ts
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { MyApiService } from './my-api.service';
+
+describe('MyApiService', () => {
+  let service: MyApiService;
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        MyApiService,
+        provideHttpClient(),        // ← Nueva API de Angular 15+ (sin HttpClientModule)
+        provideHttpClientTesting(), // ← Intercepta peticiones HTTP en tests
+      ]
+    });
+
+    service = TestBed.inject(MyApiService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify()); // Verifica que no queden peticiones pendientes
+
+  it('should fetch data', () => {
+    service.getUsers().subscribe(users => {
+      expect(users.length).toBe(1);
+    });
+
+    const req = httpMock.expectOne('/api/users');
+    expect(req.request.method).toBe('GET');
+    req.flush([{ id: 1, name: 'Test' }]);
+  });
+});
+```
+
+#### ✅ Interceptor funcional (Angular 15+)
+
+```ts
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+import { myInterceptor } from './my.interceptor';
+
+describe('myInterceptor', () => {
+  let httpMock: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        // Se registran interceptores funcionales directamente en withInterceptors()
+        provideHttpClient(withInterceptors([myInterceptor])),
+        provideHttpClientTesting(),
+      ]
+    });
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+});
+```
+
+---
+
+### 🚫 Patrones obsoletos en Angular 2026
+
+| ❌ Antes (Angular <15) | ✅ Ahora (Angular 22) |
+|---|---|
+| `declarations: [MyComponent]` | `imports: [MyComponent]` (standalone) |
+| `HttpClientModule` en imports | `provideHttpClient()` en providers |
+| `HttpClientTestingModule` | `provideHttpClientTesting()` |
+| `RouterTestingModule` | `provideRouter([])` |
+| `RouterModule.forRoot([])` | `provideRouter(routes)` |
+| `class interceptors` con `HTTP_INTERCEPTORS` | `fn interceptors` con `withInterceptors([])` |
+| `import 'jest-preset-angular/setup-env/zone'` | `setupZonelessTestEnv()` |
+| `NgModule` con `imports/declarations/exports` | Componentes standalone con `imports: []` interno |
+
+---
+
+### 🔑 Reglas de oro para tests Jest en Angular 22+
+
+1. **Todo servicio con dependencias externas → siempre mockear** con `{ provide: X, useValue: mockX }`
+2. **`moduleNameMapper` ↔ `tsconfig paths`** deben estar 100% sincronizados
+3. **`jest.config.js` en la raíz del monorepo**, nunca en sub-carpetas que no sean `rootDir`
+4. **`isolatedModules: true`** es obligatorio en `tsconfig.json` para `jest-preset-angular`
+5. **`module: "preserve"`** es requerido por Angular 22 para soporte ESM correcto
+6. **Nunca usar `describe.only` o `it.only`** en código committeado — rompe la cobertura del CI
+
+---
+
+## 🔎 Auditoría: ¿La documentación está alineada con este proyecto?
+
+Comparación archivo por archivo entre lo documentado arriba y el estado **real** del código en este repositorio.
+
+---
+
+### ✅ (1) `jest.config.js` — **100% alineado**
+
+| Propiedad | Documentado | Real en proyecto | Estado |
+|---|---|---|---|
+| `preset` | `'jest-preset-angular'` | `'jest-preset-angular'` | ✅ |
+| `setupFilesAfterEnv` | `['<rootDir>/setup-jest.ts']` | `['<rootDir>/setup-jest.ts']` | ✅ |
+| `testEnvironment` | `'jsdom'` | `'jsdom'` | ✅ |
+| `modulePaths` | `['<rootDir>']` | `['<rootDir>']` | ✅ |
+| `moduleNameMapper` | `'^core-shared$': '<rootDir>/core-shared/src/public-api.ts'` | Ídem | ✅ |
+| `testMatch` | `['**/+(*.)+(spec).+(ts)']` | Ídem | ✅ |
+| `transformIgnorePatterns` | `['node_modules/(?!.*\\.mjs$)']` | Ídem | ✅ |
+
+---
+
+### ✅ (2) `setup-jest.ts` — **100% alineado**
+
+```ts
+// Real en el proyecto:
+import { setupZonelessTestEnv } from 'jest-preset-angular/setup-env/zoneless';
+setupZonelessTestEnv();
+```
+
+Usa `setupZonelessTestEnv()` tal como se documenta. ✅
+
+---
+
+### ✅ (3) `tsconfig.json` — **100% alineado**
+
+| Campo | Documentado | Real | Estado |
+|---|---|---|---|
+| `target` | `"ES2022"` | `"ES2022"` | ✅ |
+| `module` | `"preserve"` | `"preserve"` | ✅ |
+| `isolatedModules` | `true` | `true` | ✅ |
+| `experimentalDecorators` | `true` | `true` | ✅ |
+| `paths."core-shared"` | `["./core-shared/src/public-api.ts"]` | Ídem | ✅ |
+
+---
+
+### ⚠️ (4) `tsconfig.spec.json` — **2 desviaciones detectadas**
+
+#### Desviación A — `types`: `vitest/globals` en lugar de `jest`
+
+| Campo | Documentado (recomendado) | Real en proyecto | Estado |
+|---|---|---|---|
+| `types` | `["jest"]` | `["vitest/globals"]` | ⚠️ Desviación |
+
+```jsonc
+// Lo que dice el README (correcto para proyectos Jest puros):
+"types": ["jest"]
+
+// Lo que hay REALMENTE en el proyecto:
+"types": ["vitest/globals"]
+```
+
+**¿Por qué funciona igual?** `vitest/globals` expone los mismos tipos globales que `jest` (`describe`, `it`, `expect`, `beforeEach`...) porque Vitest es compatible con la API de Jest. Sin embargo:
+
+> ⚠️ **Riesgo**: Si el proyecto solo usa Jest (no Vitest), `"vitest/globals"` es una dependencia de tipos incorrecta. Puede generar advertencias de TypeScript o conflictos si en el futuro se actualiza Vitest a una versión con tipos divergentes.
+
+**Corrección recomendada** en [`tsconfig.spec.json`](tsconfig.spec.json):
+
+```diff
+-  "types": ["vitest/globals"]
++  "types": ["jest"]
+```
+
+#### Desviación B — `include`: patrón demasiado restrictivo
+
+| Campo | Documentado | Real en proyecto | Estado |
+|---|---|---|---|
+| `include` | `["**/*.spec.ts", "**/*.d.ts"]` | `["src/**/*.d.ts", "src/**/*.spec.ts"]` | ⚠️ Desviación |
+
+El patrón `src/**/*.spec.ts` **no incluye** los specs de `core-shared/src/lib/...`:
+
+```
+core-shared/src/lib/ui/data-table/data-table.component.spec.ts  ← NO cubierto por tsconfig.spec.json
+```
+
+Jest **sí los encuentra** (vía `testMatch: '**/+(*.)+(spec).+(ts)'`), pero TypeScript no los type-check al correr `tsc --project tsconfig.spec.json`.
+
+---
+
+### ⚠️ (5) Specs `.spec.ts` — **1 incumplimiento de "Regla de oro #1"**
+
+#### `dashboard.component.spec.ts` — Mock faltante
+
+El componente [`dashboard.component.ts`](host/src/app/dashboard/dashboard.component.ts) inyecta `AuthenticationService` (que a su vez necesita `MsalService`), pero el spec no provee el mock:
+
+```ts
+// dashboard.component.ts
+private authService = inject(AuthenticationService); // necesita MsalService
+
+// dashboard.component.spec.ts ← INCOMPLETO
+providers: [provideRouter([])]
+// ↑ Falta: { provide: AuthenticationService, useValue: mockAuthService }
+```
+
+**Resultado:** `NG0201: No provider found for MsalService` → test FAIL.
+
+**Corrección** según la Regla #1 ("Todo servicio con dependencias externas → siempre mockear"):
+
+```ts
+// dashboard.component.spec.ts — versión corregida
+import { AuthenticationService } from 'core-shared';
+
+const mockAuthService = {
+  hasPermission: jest.fn().mockReturnValue(true),
+  authenticated: jest.fn().mockReturnValue(false),
+};
+
+// En providers:
+{ provide: AuthenticationService, useValue: mockAuthService }
+```
+
+---
+
+### ✅ Specs correctos — alineados con Angular 2026
+
+| Archivo | Patrón usado | Estado |
+|---|---|---|
+| [`login.component.spec.ts`](host/src/app/login/login.component.spec.ts) | `imports: [LoginComponent]` + `provideRouter` + mock de `MsalService` | ✅ |
+| [`auth.interceptor.spec.ts`](host/src/app/core/interceptors/auth.interceptor.spec.ts) | `provideHttpClient(withInterceptors([]))` + `provideHttpClientTesting()` | ✅ |
+| [`data-table.component.spec.ts`](core-shared/src/lib/ui/data-table/data-table.component.spec.ts) | Standalone imports | ✅ |
+
+---
+
+### 📊 Resumen de auditoría
+
+| Archivo | ¿Alineado? | Detalle |
+|---|---|---|
+| `jest.config.js` | ✅ **Sí** | Configuración correcta y completa |
+| `setup-jest.ts` | ✅ **Sí** | Usa `setupZonelessTestEnv()` correctamente |
+| `tsconfig.json` | ✅ **Sí** | Paths sincronizados con `moduleNameMapper` |
+| `tsconfig.spec.json` | ⚠️ **Parcial** | `types: vitest/globals` debería ser `jest`; `include` no cubre `core-shared/` |
+| `app.config.ts` | ⚠️ **Observación** | No usa `provideZonelessChangeDetection()` pese a usar `setupZonelessTestEnv()` en tests |
+| `dashboard.component.spec.ts` | ❌ **No** | Falta mock de `AuthenticationService` → FAIL |
+| `login.component.spec.ts` | ✅ **Sí** | Patrón 2026 correcto |
+| `auth.interceptor.spec.ts` | ✅ **Sí** | Patrón 2026 correcto |
+
+> **Conclusión**: La estructura general del proyecto es correcta y moderna. Hay **2 ajustes menores en config** (`tsconfig.spec.json`) y **1 spec roto** (`dashboard`) que requieren atención.
+
